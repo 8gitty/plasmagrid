@@ -99,21 +99,8 @@ def ask_ai(prompt: str) -> tuple[str, str]:
             print(f"[AI] Groq failed: {e}")
 
     # ── BACKUP 2: Cohere Command-R ────────────────────────
-    if _COHERE_OK and _cohere_client:
-        try:
-            print("[AI] Trying Cohere Command-R...")
-            resp = _cohere_client.chat(
-                model="command-r",
-                message=prompt,
-                preamble=SYSTEM_PROMPT,
-            )
-            text = _clean_json(resp.text)
-            active_ai = "Cohere Command-R"
-            print("[AI] Cohere responded ✓")
-            return text, "Cohere Command-R"
-        except Exception as e:
-            print(f"[AI] Cohere failed: {e}")
-
+   _cohere_client = None
+_COHERE_OK = False
     active_ai = "none"
     raise RuntimeError("All AI services unavailable. Check your API keys in .env")
 
