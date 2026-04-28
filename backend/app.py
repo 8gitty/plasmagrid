@@ -32,12 +32,12 @@ CORS(app)
 
 # ── FIREBASE INIT ─────────────────────────────────────────
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-KEY_PATH  = os.path.join(BASE_DIR, "firebase_key.json")
+key_json = json.loads(os.getenv("FIREBASE_KEY_JSON", "{}"))
 USE_FB    = False
 
 if FIREBASE_AVAILABLE:
     try:
-        cred = credentials.Certificate(KEY_PATH)
+        cred = credentials.Certificate(key_json)
         firebase_admin.initialize_app(cred, {
             "databaseURL": os.getenv("FIREBASE_URL")
         })
