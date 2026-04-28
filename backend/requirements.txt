@@ -6,3 +6,5 @@ python-dotenv==1.0.1
 requests==2.32.3
 groq==0.11.0
 gunicorn==21.2.0
+cohere==5.3.3
+web3==6.15.1
