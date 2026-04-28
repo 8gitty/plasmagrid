@@ -1,8 +1,7 @@
 """
-PlasmaGrid — Triple AI Engine
-Primary:  Gemini 2.0 Flash  (Google)
-Backup 1: Groq Llama 3.3    (Meta via Groq)
-Backup 2: Cohere Command-R  (Cohere)
+PlasmaGrid — Dual AI Engine
+Primary:  Gemini 2.0 Flash Lite  (Google)
+Backup:   Groq Llama 3.3         (Meta via Groq)
 
 Automatic failover — if one hits rate limit, next activates instantly.
 """
@@ -29,13 +28,8 @@ except Exception:
     _groq_client = None
     _GROQ_OK = False
 
-try:
-    import cohere
-    _cohere_client = cohere.Client(api_key=os.getenv("COHERE_KEY", ""))
-    _COHERE_OK = bool(os.getenv("COHERE_KEY"))
-except Exception:
-    _cohere_client = None
-    _COHERE_OK = False
+_cohere_client = None
+_COHERE_OK = False
 
 active_ai = "none"
 
@@ -57,28 +51,28 @@ def _clean_json(text: str) -> str:
 
 def ask_ai(prompt: str) -> tuple[str, str]:
     """
-    Tries Gemini → Groq → Cohere in order.
+    Tries Gemini → Groq in order.
     Returns (response_text, ai_name_used).
     Raises Exception if all fail.
     """
     global active_ai
 
-    # ── PRIMARY: Gemini 2.0 Flash ─────────────────────────
+    # ── PRIMARY: Gemini 2.0 Flash Lite ───────────────────
     if _GEMINI_OK and _gemini_client:
         try:
-            print("[AI] Trying Gemini 2.0 Flash...")
+            print("[AI] Trying Gemini 2.0 Flash Lite...")
             resp = _gemini_client.models.generate_content(
                 model="gemini-2.0-flash-lite",
                 contents=f"{SYSTEM_PROMPT}\n\n{prompt}"
             )
             text = _clean_json(resp.text)
-            active_ai = "Gemini 2.0 Flash"
+            active_ai = "Gemini 2.0 Flash Lite"
             print("[AI] Gemini responded ✓")
-            return text, "Gemini 2.0 Flash"
+            return text, "Gemini 2.0 Flash Lite"
         except Exception as e:
             print(f"[AI] Gemini failed: {e}")
 
-    # ── BACKUP 1: Groq Llama 3.3 ─────────────────────────
+    # ── BACKUP: Groq Llama 3.3 ────────────────────────────
     if _GROQ_OK and _groq_client:
         try:
             print("[AI] Trying Groq Llama 3.3-70B...")
@@ -98,9 +92,6 @@ def ask_ai(prompt: str) -> tuple[str, str]:
         except Exception as e:
             print(f"[AI] Groq failed: {e}")
 
-    # ── BACKUP 2: Cohere Command-R ────────────────────────
-   _cohere_client = None
-_COHERE_OK = False
     active_ai = "none"
     raise RuntimeError("All AI services unavailable. Check your API keys in .env")
 
@@ -108,7 +99,7 @@ _COHERE_OK = False
 def get_allocation_plan(hospitals: list, slime_transfers: list) -> dict:
     """
     Analyses Karnataka hospital network and returns AI allocation plan.
-    Combines biological routing (slime) with AI reasoning (Gemini/Groq/Cohere).
+    Combines biological routing (slime) with AI reasoning (Gemini/Groq).
     """
     prompt = f"""
 You are analysing Karnataka's emergency medical resource network.
@@ -202,7 +193,7 @@ Return ONLY this JSON:
 
 # ── Self-test ─────────────────────────────────────────────
 if __name__ == "__main__":
-    print("\nPlasmaGrid Triple AI Engine — Self Test")
+    print("\nPlasmaGrid Dual AI Engine — Self Test")
     print("=" * 50)
 
     hospitals = [
