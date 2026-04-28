@@ -9,8 +9,13 @@ from datetime import datetime
 
 from ai_engine import get_allocation_plan, check_threat
 from slime import slime_allocate
-from blockchain import log_transfer_on_chain, get_total_transfers
-
+try:
+    from blockchain import log_transfer_on_chain, get_total_transfers
+    BLOCKCHAIN_ENABLED = True
+except Exception:
+    BLOCKCHAIN_ENABLED = False
+    def log_transfer_on_chain(*args, **kwargs): return None
+    def get_total_transfers(): return 0
 load_dotenv()
 
 app = Flask(__name__)
