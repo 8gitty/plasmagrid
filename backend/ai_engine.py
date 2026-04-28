@@ -68,7 +68,7 @@ def ask_ai(prompt: str) -> tuple[str, str]:
         try:
             print("[AI] Trying Gemini 2.0 Flash...")
             resp = _gemini_client.models.generate_content(
-                model="gemini-2.0-flash",
+                model="gemini-2.0-flash-lite",
                 contents=f"{SYSTEM_PROMPT}\n\n{prompt}"
             )
             text = _clean_json(resp.text)
