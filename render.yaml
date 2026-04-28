@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: plasmagrid-backend
+    env: python
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app
+    envVars:
+      - key: FIREBASE_URL
+        sync: false
+      - key: GEMINI_KEY
+        sync: false
+      - key: OPENROUTER_KEY
+        sync: false

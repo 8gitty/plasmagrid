@@ -1,0 +1,7 @@
+.env
+backend/firebase_key.json
+backend/local_db.json
+__pycache__/
+*.pyc
+.DS_Store
+node_modules/
