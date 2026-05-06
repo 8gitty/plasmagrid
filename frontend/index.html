@@ -4,664 +4,766 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>PLASMAGRID — Karnataka Emergency Resource Network</title>
+<meta name="description" content="State-of-the-art emergency resource allocation and threat detection network for Karnataka, powered by AI and Blockchain.">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,300;0,400;0,500;0,700;1,300&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
+/* Modern CSS Reset & Vars */
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{
-  --ink:#e8edf2;
-  --ink2:#6b7f8f;
-  --ink3:#2d3f4f;
-  --ink4:#1a2530;
-  --paper:#040810;
-  --paper2:#080f1a;
-  --paper3:#0c1520;
-  --paper4:#101c28;
-  --rule:#0f2030;
-  --rule2:#162840;
-  --accent:#00ff88;
-  --accent2:#00cc6a;
-  --danger:#ff1744;
-  --warn:#ff6d00;
-  --info:#00b0ff;
-  --chain:#7c4dff;
-  --mono:'JetBrains Mono',monospace;
-  --fs:13px;
-  --lh:1.6;
+:root {
+  --bg-dark: #050505;
+  --bg-panel: rgba(15, 15, 18, 0.7);
+  --bg-card: rgba(25, 25, 30, 0.6);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-glow: rgba(255, 255, 255, 0.02);
+  
+  --text-main: #f0f0f2;
+  --text-muted: #8e8e99;
+  --text-dark: #5a5a66;
+  
+  --accent-cyan: #00e5ff;
+  --accent-cyan-glow: rgba(0, 229, 255, 0.3);
+  --accent-blue: #2979ff;
+  --accent-purple: #b388ff;
+  
+  --status-crit: #ff1744;
+  --status-crit-glow: rgba(255, 23, 68, 0.3);
+  --status-warn: #ff9100;
+  --status-warn-glow: rgba(255, 145, 0, 0.3);
+  --status-safe: #00e676;
+  --status-safe-glow: rgba(0, 230, 118, 0.3);
+
+  --font-ui: 'Inter', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
 }
-html,body{height:100%;overflow:hidden;font-family:var(--mono);font-size:var(--fs);background:var(--paper);color:var(--ink);-webkit-font-smoothing:antialiased}
 
-/* ── GRID LAYOUT ── */
-.shell{display:grid;grid-template-rows:40px 1fr;height:100vh}
-
-/* ── TOPBAR ── */
-.top{
-  background:var(--paper2);
-  border-bottom:1px solid var(--rule2);
-  display:flex;align-items:center;
-  padding:0 16px;gap:0;
-  position:relative;z-index:200;
+html, body {
+  height: 100%;
+  overflow: hidden;
+  font-family: var(--font-ui);
+  background-color: var(--bg-dark);
+  color: var(--text-main);
+  -webkit-font-smoothing: antialiased;
+  background-image: 
+    radial-gradient(circle at 15% 50%, rgba(41, 121, 255, 0.08), transparent 25%),
+    radial-gradient(circle at 85% 30%, rgba(179, 136, 255, 0.08), transparent 25%);
 }
-.top::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--accent)40%,var(--info)60%,transparent);opacity:.3}
 
-.logo{font-weight:700;font-size:14px;letter-spacing:.15em;color:#fff;padding-right:16px;border-right:1px solid var(--rule2);white-space:nowrap}
-.logo em{color:var(--accent);font-style:normal}
-
-.nav{display:flex;align-items:stretch;height:100%;margin-left:8px}
-.nb{background:none;border:none;border-bottom:2px solid transparent;color:var(--ink3);font:300 11px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;cursor:pointer;padding:0 14px;transition:all .15s}
-.nb:hover{color:var(--ink2)}
-.nb.on{color:var(--accent);border-bottom-color:var(--accent)}
-
-.top-right{display:flex;align-items:center;gap:16px;margin-left:auto}
-.metric{display:flex;flex-direction:column;align-items:flex-end}
-.metric-v{font-weight:700;font-size:15px;line-height:1;letter-spacing:-.02em}
-.metric-l{font-size:9px;color:var(--ink3);text-transform:uppercase;letter-spacing:.1em;margin-top:2px}
-.pill-live{display:flex;align-items:center;gap:6px;border:1px solid var(--rule2);padding:3px 10px;font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--accent)}
-.dot-live{width:5px;height:5px;border-radius:50%;background:var(--accent);animation:blink 2s ease infinite}
-@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
-
-/* ── BODY AREA ── */
-.body-area{display:flex;overflow:hidden}
-
-/* ── SIDEBAR ── */
-.side{
-  width:220px;flex-shrink:0;
-  background:var(--paper2);
-  border-right:1px solid var(--rule2);
-  display:flex;flex-direction:column;
-  overflow:hidden;
+/* Glassmorphism Utilities */
+.glass {
+  background: var(--bg-panel);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--glass-border);
 }
-.side-section{border-bottom:1px solid var(--rule)}
-.side-label{font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--ink3);padding:10px 14px 6px}
-.side-row{
-  display:flex;align-items:center;justify-content:space-between;
-  padding:5px 14px;font-size:11px;cursor:pointer;
-  color:var(--ink2);transition:background .1s;
+
+.glass-card {
+  background: var(--bg-card);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.2);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
-.side-row:hover{background:var(--paper3);color:var(--ink)}
-.side-row.city-active{color:var(--accent)}
-.side-count{font-size:10px;font-weight:700}
-.side-count.red{color:var(--danger)}
-.side-count.amber{color:var(--warn)}
-.side-count.green{color:var(--accent)}
-.side-count.blue{color:var(--info)}
-
-.node-filter{padding:8px 14px;border-bottom:1px solid var(--rule)}
-.node-filter input{
-  width:100%;background:var(--paper3);border:1px solid var(--rule2);
-  color:var(--ink);font:11px var(--mono);padding:5px 8px;
-  outline:none;
+.glass-card:hover {
+  border-color: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.3);
 }
-.node-filter input::placeholder{color:var(--ink3)}
-.node-filter input:focus{border-color:var(--accent)}
 
-.side-scroll{flex:1;overflow-y:auto}
-.side-scroll::-webkit-scrollbar{width:3px}
-.side-scroll::-webkit-scrollbar-thumb{background:var(--rule2)}
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--text-dark); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
 
-/* ── MAIN CONTENT ── */
-.main{flex:1;overflow:hidden;display:flex;flex-direction:column}
-.view{display:none;flex:1;overflow:hidden;flex-direction:column}
-.view.on{display:flex}
+/* Layout */
+.shell { display: grid; grid-template-rows: 64px 1fr; height: 100vh; }
+.body-area { display: flex; overflow: hidden; gap: 16px; padding: 16px; padding-top: 0; }
 
-/* ── MAP ── */
-#map{flex:1}
-.map-hud{
-  position:absolute;bottom:16px;right:16px;z-index:500;
-  background:var(--paper2);border:1px solid var(--rule2);
-  padding:12px 14px;min-width:140px;
+/* Topbar */
+.top {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 24px;
+  background: transparent;
+  position: relative; z-index: 200;
 }
-.hud-row{display:flex;justify-content:space-between;align-items:center;gap:20px;margin-bottom:6px;font-size:11px}
-.hud-row:last-child{margin-bottom:0}
-.hud-label{color:var(--ink3);text-transform:uppercase;letter-spacing:.08em;font-size:9px}
-.hud-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
-
-/* ── RESOURCE VIEW ── */
-.res-wrap{flex:1;overflow-y:auto;padding:0}
-.res-wrap::-webkit-scrollbar{width:3px}
-.res-wrap::-webkit-scrollbar-thumb{background:var(--rule2)}
-
-.res-topbar{
-  display:flex;align-items:center;justify-content:space-between;
-  padding:10px 16px;border-bottom:1px solid var(--rule);
-  background:var(--paper2);position:sticky;top:0;z-index:10;
+.logo-container { display: flex; align-items: center; gap: 12px; }
+.logo {
+  font-family: var(--font-mono);
+  font-weight: 700; font-size: 18px; letter-spacing: 0.1em;
+  background: linear-gradient(90deg, #fff, var(--text-muted));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
 }
-.res-title{font-size:11px;color:var(--ink2);text-transform:uppercase;letter-spacing:.1em}
-.run-btn{
-  background:var(--accent);color:#000;border:none;
-  font:700 11px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;
-  padding:7px 16px;cursor:pointer;transition:all .15s;
+.logo em { font-style: normal; color: var(--accent-cyan); -webkit-text-fill-color: var(--accent-cyan); text-shadow: 0 0 12px var(--accent-cyan-glow); }
+
+.nav { display: flex; gap: 8px; }
+.nb {
+  background: transparent; border: none; color: var(--text-muted);
+  font-family: var(--font-ui); font-weight: 500; font-size: 13px; letter-spacing: 0.05em; text-transform: uppercase;
+  padding: 8px 16px; border-radius: 8px; cursor: pointer; transition: all 0.2s ease;
 }
-.run-btn:hover{background:var(--accent2)}
-.run-btn:disabled{background:var(--paper4);color:var(--ink3);cursor:not-allowed}
+.nb:hover { color: var(--text-main); background: rgba(255,255,255,0.05); }
+.nb.on { color: var(--accent-cyan); background: rgba(0, 229, 255, 0.1); box-shadow: inset 0 0 0 1px rgba(0, 229, 255, 0.2); }
 
-.stat-strip{
-  display:grid;grid-template-columns:repeat(5,1fr);
-  border-bottom:1px solid var(--rule);
+.top-right { display: flex; align-items: center; gap: 24px; }
+.metric { display: flex; flex-direction: column; align-items: flex-end; }
+.metric-v { font-family: var(--font-mono); font-weight: 700; font-size: 18px; line-height: 1; text-shadow: 0 0 10px currentColor; }
+.metric-l { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.1em; margin-top: 4px; font-weight: 600; }
+.pill-live {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 12px; border-radius: 20px;
+  border: 1px solid rgba(0, 230, 118, 0.3);
+  background: rgba(0, 230, 118, 0.05);
+  font-size: 11px; font-weight: 600; letter-spacing: 0.1em; color: var(--status-safe);
 }
-.stat-cell{
-  padding:10px 14px;border-right:1px solid var(--rule);
-  position:relative;
+.dot-live { width: 6px; height: 6px; border-radius: 50%; background: var(--status-safe); box-shadow: 0 0 8px var(--status-safe); animation: blink 2s ease-in-out infinite; }
+@keyframes blink { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(0.8); } }
+
+/* Sidebar */
+.side {
+  width: 280px; flex-shrink: 0;
+  display: flex; flex-direction: column;
+  border-radius: 16px; overflow: hidden;
 }
-.stat-cell:last-child{border-right:none}
-.stat-cell::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
-.stat-cell.r::before{background:var(--danger)}
-.stat-cell.a::before{background:var(--warn)}
-.stat-cell.g::before{background:var(--accent)}
-.stat-cell.b::before{background:var(--info)}
-.stat-cell.p::before{background:var(--chain)}
-.sc-lbl{font-size:9px;color:var(--ink3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px}
-.sc-val{font-size:26px;font-weight:700;line-height:1;letter-spacing:-.03em}
-.sc-sub{font-size:9px;color:var(--ink3);margin-top:3px}
-
-.result-banner{padding:12px 16px;border-bottom:1px solid var(--rule);background:var(--paper2)}
-.rb-head{display:flex;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap}
-.tag{font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;padding:3px 9px;border:1px solid}
-.tag-crit{color:var(--danger);border-color:var(--danger)40;background:var(--danger)08}
-.tag-high{color:var(--warn);border-color:var(--warn)40;background:var(--warn)08}
-.tag-med{color:var(--info);border-color:var(--info)40;background:var(--info)08}
-.tag-low{color:var(--accent);border-color:var(--accent)40;background:var(--accent)08}
-.tag-ai{color:var(--info);border-color:var(--info)30;background:var(--info)08;font-weight:300}
-.tag-lives{color:var(--danger);border-color:var(--danger)30;background:var(--danger)08;font-weight:300;margin-left:auto}
-.rb-summary{font-size:12px;color:var(--ink2);line-height:1.65;margin-bottom:10px}
-.rb-section{font-size:9px;color:var(--ink3);text-transform:uppercase;letter-spacing:.12em;margin-bottom:6px}
-.tx-card{
-  border:1px solid var(--rule2);padding:10px 12px;margin-bottom:6px;
-  position:relative;
+.side-header { padding: 20px; border-bottom: 1px solid var(--glass-border); }
+.node-filter input {
+  width: 100%; background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border); border-radius: 8px;
+  color: var(--text-main); font-family: var(--font-ui); font-size: 13px; padding: 10px 14px;
+  outline: none; transition: border-color 0.2s, box-shadow 0.2s;
 }
-.tx-card::before{content:'';position:absolute;top:0;left:0;bottom:0;width:2px;background:var(--accent)}
-.tx-top{display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap}
-.tx-from{color:var(--accent);font-weight:500;font-size:11px}
-.tx-arr{color:var(--ink3);font-size:11px}
-.tx-to{color:var(--danger);font-weight:500;font-size:11px}
-.tx-res{color:var(--chain);font-size:10px;margin-left:auto;border:1px solid var(--chain)30;padding:1px 7px}
-.tx-why{font-size:11px;color:var(--ink2);line-height:1.5}
-.tx-time{font-size:10px;color:var(--ink3);margin-top:3px}
-.slime-rows{margin-top:8px;padding-top:8px;border-top:1px solid var(--rule)}
-.slime-r{font-size:10px;color:var(--ink3);padding:3px 0;border-bottom:1px solid var(--rule);display:flex;align-items:center;gap:5px}
-.slime-r:last-child{border-bottom:none}
-.chain-confirm{font-size:10px;color:var(--accent);margin-top:8px;display:flex;align-items:center;gap:6px;opacity:.8}
+.node-filter input:focus { border-color: var(--accent-cyan); box-shadow: 0 0 0 2px rgba(0, 229, 255, 0.2); }
+.node-filter input::placeholder { color: var(--text-dark); }
 
-.hosp-table{width:100%;border-collapse:collapse}
-.hosp-table th{
-  text-align:left;font-size:9px;font-weight:400;text-transform:uppercase;
-  letter-spacing:.12em;color:var(--ink3);padding:7px 12px;
-  border-bottom:1px solid var(--rule2);background:var(--paper2);
-  position:sticky;top:0;
+.side-section { padding: 16px 0; border-bottom: 1px solid var(--glass-border); }
+.side-section:last-child { border-bottom: none; }
+.side-label { font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); padding: 0 20px 12px; }
+.side-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 20px; font-size: 13px; font-weight: 500; cursor: pointer;
+  color: var(--text-main); transition: all 0.2s;
+  border-left: 3px solid transparent;
 }
-.hosp-table td{padding:7px 12px;border-bottom:1px solid var(--rule);font-size:11px;vertical-align:middle}
-.hosp-table tr:hover td{background:var(--paper3)}
-.city-chip{font-size:9px;color:var(--ink3);text-transform:uppercase;letter-spacing:.08em}
-.type-chip{font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:2px 6px;border:1px solid}
-.tc-gov{color:var(--accent);border-color:var(--accent)30}
-.tc-pvt{color:var(--info);border-color:var(--info)30}
-.tc-blood{color:var(--danger);border-color:var(--danger)30}
-.tc-depot{color:var(--warn);border-color:var(--warn)30}
-.sc-bar-wrap{width:80px;height:4px;background:var(--rule2);position:relative;display:inline-block}
-.sc-bar-fill{height:100%;position:absolute;top:0;left:0;transition:width .5s}
+.side-row:hover { background: rgba(255,255,255,0.03); }
+.side-row.city-active { background: rgba(0, 229, 255, 0.05); border-left-color: var(--accent-cyan); }
+.side-count { font-family: var(--font-mono); font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 12px; background: rgba(255,255,255,0.05); }
+.side-count.red { color: var(--status-crit); background: rgba(255, 23, 68, 0.1); }
+.side-count.amber { color: var(--status-warn); background: rgba(255, 145, 0, 0.1); }
+.side-count.green { color: var(--status-safe); background: rgba(0, 230, 118, 0.1); }
+.side-count.blue { color: var(--accent-cyan); background: rgba(0, 229, 255, 0.1); }
 
-/* ── THREAT VIEW ── */
-.threat-wrap{flex:1;display:grid;grid-template-columns:1fr 1fr;overflow:hidden}
-.tcol{display:flex;flex-direction:column;overflow:hidden;border-right:1px solid var(--rule)}
-.tcol:last-child{border-right:none}
-.tcol-head{
-  display:flex;align-items:center;justify-content:space-between;
-  padding:8px 14px;border-bottom:1px solid var(--rule2);
-  background:var(--paper2);flex-shrink:0;
+.side-scroll { flex: 1; overflow-y: auto; padding: 8px 0; }
+
+/* Main Area */
+.main { flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; border-radius: 16px; }
+.view { display: none; flex: 1; overflow: hidden; flex-direction: column; animation: fadeIn 0.3s ease; }
+.view.on { display: flex; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+
+/* Map */
+#map { flex: 1; border-radius: 16px; background: #000; }
+.map-hud {
+  position: absolute; bottom: 24px; right: 24px; z-index: 500;
+  padding: 16px 20px; border-radius: 12px;
+  min-width: 180px;
 }
-.tcol-title{font-size:9px;text-transform:uppercase;letter-spacing:.15em;color:var(--ink3)}
-.tcol-scroll{flex:1;overflow-y:auto;padding:10px 12px}
-.tcol-scroll::-webkit-scrollbar{width:3px}
-.tcol-scroll::-webkit-scrollbar-thumb{background:var(--rule2)}
+.hud-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+.hud-row:last-child { margin-bottom: 0; }
+.hud-label { color: var(--text-main); font-weight: 500; font-size: 12px; }
+.hud-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
 
-.atk-btn{background:var(--danger)12;color:var(--danger);border:1px solid var(--danger)30;font:600 9px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;padding:5px 12px;cursor:pointer}
-.atk-btn:hover{background:var(--danger)22}
-.rst-btn{background:none;color:var(--ink3);border:1px solid var(--rule2);font:300 9px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;padding:5px 12px;cursor:pointer}
-.rst-btn:hover{color:var(--ink2);border-color:var(--ink3)}
-
-.threat-card{
-  border:1px solid var(--danger)20;background:var(--danger)04;
-  padding:10px 12px;margin-bottom:8px;animation:threatIn .3s ease;
-  position:relative;
+/* Resource View */
+.res-wrap { flex: 1; overflow-y: auto; padding: 24px; display: flex; flex-direction: column; gap: 24px; }
+.res-topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 24px; border-radius: 16px;
+  background: linear-gradient(135deg, rgba(25, 25, 30, 0.8), rgba(15, 15, 18, 0.9));
+  border: 1px solid var(--glass-border);
 }
-.threat-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:2px;background:var(--danger)}
-@keyframes threatIn{from{opacity:0;transform:translateX(-8px)}to{opacity:1;transform:translateX(0)}}
-.tc-type{font-size:10px;font-weight:700;color:var(--danger);text-transform:uppercase;letter-spacing:.1em;margin-bottom:3px}
-.tc-body{font-size:11px;color:var(--ink2);line-height:1.6}
-.tc-meta{font-size:9px;color:var(--ink3);margin-top:5px}
-.q-badge{display:inline-block;font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:2px 8px;background:var(--danger)10;color:var(--danger);border:1px solid var(--danger)25;margin-top:5px}
+.res-title { font-size: 18px; font-weight: 700; color: #fff; letter-spacing: 0.05em; }
+.res-subtitle { font-size: 12px; color: var(--accent-cyan); margin-top: 6px; font-family: var(--font-mono); }
 
-.chain-card{
-  border:1px solid var(--chain)20;background:var(--chain)04;
-  padding:10px 12px;margin-bottom:8px;position:relative;
+.run-btn {
+  background: linear-gradient(135deg, #00e5ff, #00b0ff);
+  color: #000; border: none; border-radius: 8px;
+  font-family: var(--font-mono); font-weight: 700; font-size: 13px; letter-spacing: 0.1em; text-transform: uppercase;
+  padding: 12px 24px; cursor: pointer; transition: all 0.2s;
+  box-shadow: 0 4px 16px rgba(0, 229, 255, 0.3);
 }
-.chain-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:2px;background:var(--chain)}
-.chain-hash{font-size:9px;color:var(--chain);word-break:break-all;margin-bottom:4px;font-family:var(--mono)}
-.chain-meta{font-size:10px;color:var(--ink3);line-height:1.7}
-.chain-link{color:var(--info);font-size:10px;text-decoration:none}
-.chain-link:hover{text-decoration:underline}
+.run-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0, 229, 255, 0.4); filter: brightness(1.1); }
+.run-btn:disabled { background: var(--text-dark); color: var(--text-muted); cursor: not-allowed; transform: none; box-shadow: none; filter: none; }
 
-/* ── MISC ── */
-.loading{padding:30px;text-align:center;color:var(--ink3);font-size:11px}
-.spin{display:inline-block;width:12px;height:12px;border:1px solid var(--rule2);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite;margin-right:8px;vertical-align:middle}
-@keyframes spin{to{transform:rotate(360deg)}}
-.err{background:var(--danger)08;border:1px solid var(--danger)20;padding:12px;color:var(--danger);font-size:11px;margin:12px}
+.stat-grid {
+  display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px;
+}
+.stat-card {
+  padding: 20px; border-top: 3px solid transparent;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.stat-card.r { border-top-color: var(--status-crit); }
+.stat-card.a { border-top-color: var(--status-warn); }
+.stat-card.g { border-top-color: var(--status-safe); }
+.stat-card.b { border-top-color: var(--accent-blue); }
+.stat-card.p { border-top-color: var(--accent-purple); }
+.sc-lbl { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.1em; }
+.sc-val { font-family: var(--font-mono); font-size: 32px; font-weight: 700; line-height: 1; }
+.sc-sub { font-size: 11px; color: var(--text-dark); }
 
-.leaflet-popup-content-wrapper{background:var(--paper2)!important;border:1px solid var(--rule2)!important;border-radius:0!important;box-shadow:0 4px 24px #000a!important}
-.leaflet-popup-tip{background:var(--paper2)!important}
-.lp-name{font-size:12px;font-weight:700;color:#fff;margin-bottom:2px;letter-spacing:.02em}
-.lp-city{font-size:9px;color:var(--accent);text-transform:uppercase;letter-spacing:.12em;margin-bottom:8px}
-.lp-row{font-size:10px;color:var(--ink2);display:flex;justify-content:space-between;gap:12px;margin-bottom:3px}
-.lp-row span{color:var(--ink);font-weight:500}
-.lp-sc{font-size:18px;font-weight:700;margin-top:6px}
-.lp-bar{height:2px;background:var(--rule2);margin-top:4px;overflow:hidden}
-.lp-fill{height:100%}
+/* Result Banner */
+.result-banner { padding: 24px; }
+.rb-head { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+.tag { font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; padding: 4px 12px; border-radius: 16px; border: 1px solid; }
+.tag-crit { color: var(--status-crit); border-color: rgba(255,23,68,0.4); background: rgba(255,23,68,0.1); }
+.tag-high { color: var(--status-warn); border-color: rgba(255,145,0,0.4); background: rgba(255,145,0,0.1); }
+.tag-med { color: var(--accent-blue); border-color: rgba(41,121,255,0.4); background: rgba(41,121,255,0.1); }
+.tag-low { color: var(--status-safe); border-color: rgba(0,230,118,0.4); background: rgba(0,230,118,0.1); }
+.tag-ai { color: var(--accent-purple); border-color: rgba(179,136,255,0.4); background: rgba(179,136,255,0.1); }
+.tag-lives { color: #fff; border-color: var(--status-crit); background: var(--status-crit); margin-left: auto; box-shadow: 0 0 12px var(--status-crit-glow); }
+
+.rb-summary { font-size: 15px; color: var(--text-main); line-height: 1.6; margin-bottom: 24px; font-weight: 500; }
+.tx-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; margin-bottom: 24px; }
+.tx-card {
+  padding: 16px; border-radius: 12px; background: rgba(0,0,0,0.2);
+  border: 1px solid var(--glass-border); border-left: 3px solid var(--accent-cyan);
+}
+.tx-top { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
+.tx-from { color: var(--status-safe); font-weight: 600; font-size: 13px; }
+.tx-arr { color: var(--text-dark); font-size: 13px; }
+.tx-to { color: var(--status-crit); font-weight: 600; font-size: 13px; }
+.tx-res { color: var(--accent-purple); font-size: 11px; font-weight: 700; margin-left: auto; padding: 2px 8px; border-radius: 8px; background: rgba(179,136,255,0.1); }
+.tx-why { font-size: 13px; color: var(--text-muted); line-height: 1.5; }
+.tx-time { font-size: 11px; color: var(--text-dark); margin-top: 8px; font-family: var(--font-mono); }
+
+.slime-box { padding: 16px; border-radius: 12px; background: rgba(0,230,118,0.05); border: 1px solid rgba(0,230,118,0.1); }
+.slime-r { font-size: 12px; color: var(--text-muted); padding: 6px 0; border-bottom: 1px dashed var(--glass-border); display: flex; align-items: center; gap: 8px; }
+.slime-r:last-child { border-bottom: none; }
+.chain-confirm { font-size: 11px; font-weight: 600; color: var(--accent-cyan); margin-top: 16px; display: flex; align-items: center; gap: 8px; letter-spacing: 0.05em; }
+
+/* Table */
+.table-container { border-radius: 16px; overflow: hidden; border: 1px solid var(--glass-border); }
+.hosp-table { width: 100%; border-collapse: collapse; background: var(--bg-card); }
+.hosp-table th {
+  text-align: left; font-size: 11px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: 0.1em; color: var(--text-muted); padding: 16px 20px;
+  background: rgba(0,0,0,0.3); border-bottom: 1px solid var(--glass-border);
+}
+.hosp-table td { padding: 16px 20px; border-bottom: 1px solid var(--glass-border); font-size: 13px; vertical-align: middle; }
+.hosp-table tbody tr { transition: background 0.2s; }
+.hosp-table tbody tr:hover { background: rgba(255,255,255,0.03); }
+.city-chip { font-size: 11px; color: var(--text-dark); margin-top: 4px; }
+.type-chip { font-size: 10px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; padding: 4px 8px; border-radius: 6px; }
+.tc-gov { color: var(--accent-cyan); background: rgba(0,229,255,0.1); }
+.tc-pvt { color: var(--accent-blue); background: rgba(41,121,255,0.1); }
+.tc-blood { color: var(--status-crit); background: rgba(255,23,68,0.1); }
+.tc-depot { color: var(--status-warn); background: rgba(255,145,0,0.1); }
+
+.sc-bar-wrap { width: 100%; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden; margin-top: 6px; }
+.sc-bar-fill { height: 100%; border-radius: 3px; transition: width 0.8s cubic-bezier(0.2, 0.8, 0.2, 1); }
+
+/* Threats View */
+.threat-wrap { flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 24px; padding: 24px; overflow: hidden; }
+.tcol { display: flex; flex-direction: column; overflow: hidden; }
+.tcol-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding-bottom: 16px; border-bottom: 1px solid var(--glass-border); margin-bottom: 16px;
+}
+.tcol-title { font-size: 16px; font-weight: 600; color: #fff; letter-spacing: 0.05em; }
+.tcol-scroll { flex: 1; overflow-y: auto; padding-right: 8px; display: flex; flex-direction: column; gap: 12px; }
+
+.btn-sm {
+  background: transparent; border: 1px solid var(--glass-border); color: var(--text-main);
+  font-family: var(--font-ui); font-weight: 600; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase;
+  padding: 8px 16px; border-radius: 6px; cursor: pointer; transition: all 0.2s;
+}
+.atk-btn { border-color: rgba(255,23,68,0.5); color: var(--status-crit); background: rgba(255,23,68,0.05); }
+.atk-btn:hover { background: rgba(255,23,68,0.15); box-shadow: 0 0 12px rgba(255,23,68,0.2); }
+.rst-btn:hover { background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.2); }
+
+.threat-card {
+  padding: 16px; border-radius: 12px; background: linear-gradient(135deg, rgba(255,23,68,0.1), rgba(0,0,0,0.2));
+  border: 1px solid rgba(255,23,68,0.3); border-left: 4px solid var(--status-crit);
+  animation: slideIn 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+@keyframes slideIn { from { opacity: 0; transform: translateX(-20px); } to { opacity: 1; transform: translateX(0); } }
+.tc-type { font-size: 12px; font-weight: 700; color: var(--status-crit); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px; }
+.tc-body { font-size: 14px; color: var(--text-main); line-height: 1.6; }
+.tc-meta { font-size: 11px; color: var(--text-muted); margin-top: 12px; font-family: var(--font-mono); }
+.q-badge { display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: 0.1em; padding: 4px 10px; border-radius: 12px; background: var(--status-crit); color: #fff; margin-top: 12px; }
+
+.chain-card {
+  padding: 16px; border-radius: 12px; background: rgba(179,136,255,0.05);
+  border: 1px solid rgba(179,136,255,0.2); border-left: 4px solid var(--accent-purple);
+  animation: slideIn 0.4s;
+}
+.chain-hash { font-size: 12px; color: var(--accent-purple); word-break: break-all; margin-bottom: 8px; font-family: var(--font-mono); }
+.chain-meta { font-size: 12px; color: var(--text-muted); line-height: 1.6; }
+.chain-link { color: var(--accent-cyan); font-size: 11px; font-weight: 600; text-decoration: none; margin-top: 8px; display: inline-block; }
+.chain-link:hover { text-decoration: underline; text-shadow: 0 0 8px var(--accent-cyan-glow); }
+
+/* Misc */
+.loading { padding: 40px; text-align: center; color: var(--text-muted); font-size: 14px; font-weight: 500; }
+.spin { display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.1); border-top-color: var(--accent-cyan); border-radius: 50%; animation: spin 0.8s linear infinite; margin-right: 12px; vertical-align: -3px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.err { background: rgba(255,23,68,0.1); border: 1px solid rgba(255,23,68,0.3); padding: 16px; border-radius: 8px; color: var(--status-crit); font-weight: 500; }
+
+/* Map Overrides */
+.leaflet-popup-content-wrapper { background: rgba(15,15,18,0.95) !important; backdrop-filter: blur(8px); border: 1px solid var(--glass-border) !important; border-radius: 12px !important; box-shadow: 0 8px 32px rgba(0,0,0,0.5) !important; color: var(--text-main) !important; }
+.leaflet-popup-tip { background: rgba(15,15,18,0.95) !important; }
+.lp-name { font-family: var(--font-ui); font-size: 14px; font-weight: 700; color: #fff; margin-bottom: 4px; }
+.lp-city { font-size: 10px; color: var(--accent-cyan); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 12px; }
+.lp-row { font-size: 12px; color: var(--text-muted); display: flex; justify-content: space-between; gap: 16px; margin-bottom: 6px; }
+.lp-row span { color: #fff; font-weight: 600; font-family: var(--font-mono); }
+.lp-sc { font-size: 24px; font-weight: 700; margin-top: 12px; font-family: var(--font-mono); }
 </style>
 </head>
 <body>
 <div class="shell">
 
 <!-- TOPBAR -->
-<div class="top">
-  <div class="logo">PLASMA<em>GRID</em></div>
-  <nav class="nav">
-    <button class="nb on" onclick="view('map',this)">MAP</button>
-    <button class="nb" onclick="view('resources',this)">RESOURCES</button>
-    <button class="nb" onclick="view('threats',this)">THREATS</button>
+<header class="top">
+  <div class="logo-container">
+    <div class="logo">PLASMA<em>GRID</em></div>
+  </div>
+  <nav class="nav glass">
+    <button class="nb on" onclick="view('map',this)">Network Map</button>
+    <button class="nb" onclick="view('resources',this)">Resources</button>
+    <button class="nb" onclick="view('threats',this)">Threat Intel</button>
   </nav>
   <div class="top-right">
-    <div class="metric"><div class="metric-v" id="h-nodes" style="color:var(--info)">—</div><div class="metric-l">Nodes</div></div>
-    <div class="metric"><div class="metric-v" id="h-crit" style="color:var(--danger)">—</div><div class="metric-l">Critical</div></div>
-    <div class="metric"><div class="metric-v" id="h-cities" style="color:var(--chain)">—</div><div class="metric-l">Cities</div></div>
-    <div class="pill-live"><div class="dot-live"></div>LIVE</div>
+    <div class="metric"><div class="metric-v" id="h-nodes" style="color:var(--accent-cyan)">—</div><div class="metric-l">Active Nodes</div></div>
+    <div class="metric"><div class="metric-v" id="h-crit" style="color:var(--status-crit)">—</div><div class="metric-l">Critical Zones</div></div>
+    <div class="pill-live"><div class="dot-live"></div>SYSTEM LIVE</div>
   </div>
-</div>
+</header>
 
 <!-- BODY -->
 <div class="body-area">
 
   <!-- SIDEBAR -->
-  <div class="side">
-    <div class="node-filter"><input type="text" id="search" placeholder="Search nodes..." oninput="filterSearch(this.value)"></div>
-
-    <div class="side-section">
-      <div class="side-label">Network Status</div>
-      <div class="side-row" onclick="filterCity('ALL')"><span>All Karnataka</span><span class="side-count blue" id="s-total">—</span></div>
-      <div class="side-row" onclick="filterCity('ALL')"><span style="color:var(--danger)">■</span> Critical<span class="side-count red" id="s-crit">—</span></div>
-      <div class="side-row" onclick="filterCity('ALL')"><span style="color:var(--warn)">■</span> Warning<span class="side-count amber" id="s-warn">—</span></div>
-      <div class="side-row" onclick="filterCity('ALL')"><span style="color:var(--accent)">■</span> Safe<span class="side-count green" id="s-safe">—</span></div>
+  <aside class="side glass">
+    <div class="side-header">
+      <div class="node-filter"><input type="text" id="search" placeholder="Search nodes or cities..." oninput="filterSearch(this.value)"></div>
     </div>
-
-    <div class="side-section">
-      <div class="side-label">Jump to City</div>
-      <div class="side-scroll" id="city-list"></div>
+    <div class="side-scroll">
+      <div class="side-section">
+        <div class="side-label">State Overview</div>
+        <div class="side-row city-active" onclick="filterCity('ALL')"><span>All Karnataka</span><span class="side-count blue" id="s-total">—</span></div>
+        <div class="side-row" onclick="filterCity('ALL')"><span>Critical</span><span class="side-count red" id="s-crit">—</span></div>
+        <div class="side-row" onclick="filterCity('ALL')"><span>Warning</span><span class="side-count amber" id="s-warn">—</span></div>
+        <div class="side-row" onclick="filterCity('ALL')"><span>Safe</span><span class="side-count green" id="s-safe">—</span></div>
+      </div>
+      <div class="side-section">
+        <div class="side-label">Districts</div>
+        <div id="city-list"></div>
+      </div>
     </div>
-  </div>
+  </aside>
 
   <!-- MAIN -->
-  <div class="main">
+  <main class="main glass">
 
     <!-- MAP VIEW -->
-    <div class="view on" id="view-map" style="position:relative">
-      <div id="map" style="flex:1"></div>
-      <div class="map-hud">
-        <div class="side-label" style="margin-bottom:8px;padding:0">Legend</div>
-        <div class="hud-row"><span class="hud-label">Critical</span><div class="hud-dot" style="background:var(--danger);box-shadow:0 0 8px var(--danger)88"></div></div>
-        <div class="hud-row"><span class="hud-label">Warning</span><div class="hud-dot" style="background:var(--warn);box-shadow:0 0 8px var(--warn)88"></div></div>
-        <div class="hud-row"><span class="hud-label">Safe</span><div class="hud-dot" style="background:var(--accent);box-shadow:0 0 8px var(--accent)88"></div></div>
-        <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--rule);font-size:9px;color:var(--ink3);line-height:1.8">Size = urgency<br>Click = details</div>
+    <section class="view on" id="view-map">
+      <div id="map"></div>
+      <div class="map-hud glass-card">
+        <div class="hud-label" style="margin-bottom:12px; color: var(--text-muted); font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em;">Threat Level</div>
+        <div class="hud-row"><span class="hud-label">Critical</span><div class="hud-dot" style="background:var(--status-crit);box-shadow:0 0 12px var(--status-crit-glow)"></div></div>
+        <div class="hud-row"><span class="hud-label">Warning</span><div class="hud-dot" style="background:var(--status-warn);box-shadow:0 0 12px var(--status-warn-glow)"></div></div>
+        <div class="hud-row"><span class="hud-label">Stable</span><div class="hud-dot" style="background:var(--status-safe);box-shadow:0 0 12px var(--status-safe-glow)"></div></div>
       </div>
-    </div>
+    </section>
 
     <!-- RESOURCE VIEW -->
-    <div class="view" id="view-resources">
-      <!-- sticky top -->
-      <div class="res-topbar">
-        <div>
-          <div class="res-title">Resource Allocation Engine</div>
-          <div style="font-size:9px;color:var(--ink3);margin-top:3px">physarum_slime_mould + triple_ai_engine → karnataka_state_emergency_network</div>
-        </div>
-        <button class="run-btn" onclick="runAlloc()" id="runBtn">⚡ RUN AI ALLOCATION</button>
-      </div>
-
-      <!-- stats strip -->
-      <div class="stat-strip">
-        <div class="stat-cell r"><div class="sc-lbl">Critical</div><div class="sc-val" style="color:var(--danger)" id="st-crit">—</div><div class="sc-sub">scarcity &gt;65</div></div>
-        <div class="stat-cell a"><div class="sc-lbl">Warning</div><div class="sc-val" style="color:var(--warn)" id="st-warn">—</div><div class="sc-sub">scarcity 35–65</div></div>
-        <div class="stat-cell g"><div class="sc-lbl">Safe</div><div class="sc-val" style="color:var(--accent)" id="st-safe">—</div><div class="sc-sub">scarcity &lt;35</div></div>
-        <div class="stat-cell b"><div class="sc-lbl">Total</div><div class="sc-val" style="color:var(--info)" id="st-total">—</div><div class="sc-sub">state network</div></div>
-        <div class="stat-cell p"><div class="sc-lbl">Cities</div><div class="sc-val" style="color:var(--chain)" id="st-cities">—</div><div class="sc-sub">across Karnataka</div></div>
-      </div>
-
-      <!-- result banner -->
-      <div id="result-wrap"></div>
-
-      <!-- hospital table -->
+    <section class="view" id="view-resources">
       <div class="res-wrap">
-        <table class="hosp-table">
-          <thead>
-            <tr>
-              <th>Hospital / Node</th>
-              <th>City</th>
-              <th>Type</th>
-              <th>Scarcity</th>
-              <th>Beds</th>
-              <th>Blood</th>
-              <th>Amb</th>
-              <th>O₂</th>
-            </tr>
-          </thead>
-          <tbody id="hosp-tbody">
-            <tr><td colspan="8" class="loading"><span class="spin"></span>Loading Karnataka network...</td></tr>
-          </tbody>
-        </table>
+        
+        <div class="res-topbar">
+          <div>
+            <h2 class="res-title">AI Resource Allocation Engine</h2>
+            <div class="res-subtitle">Powered by Gemini AI & Physarum Routing</div>
+          </div>
+          <button class="run-btn" onclick="runAlloc()" id="runBtn">⚡ Initialize Allocation</button>
+        </div>
+
+        <div class="stat-grid">
+          <div class="stat-card glass-card r"><div class="sc-lbl">Critical</div><div class="sc-val" style="color:var(--status-crit)" id="st-crit">—</div><div class="sc-sub">Urgent need</div></div>
+          <div class="stat-card glass-card a"><div class="sc-lbl">Warning</div><div class="sc-val" style="color:var(--status-warn)" id="st-warn">—</div><div class="sc-sub">Elevated strain</div></div>
+          <div class="stat-card glass-card g"><div class="sc-lbl">Safe</div><div class="sc-val" style="color:var(--status-safe)" id="st-safe">—</div><div class="sc-sub">Optimal capacity</div></div>
+          <div class="stat-card glass-card b"><div class="sc-lbl">Total Nodes</div><div class="sc-val" style="color:var(--accent-cyan)" id="st-total">—</div><div class="sc-sub">Active in grid</div></div>
+          <div class="stat-card glass-card p"><div class="sc-lbl">Districts</div><div class="sc-val" style="color:var(--accent-purple)" id="st-cities">—</div><div class="sc-sub">Covered</div></div>
+        </div>
+
+        <div id="result-wrap"></div>
+
+        <div class="table-container">
+          <table class="hosp-table">
+            <thead>
+              <tr>
+                <th>Facility / Node</th>
+                <th>District</th>
+                <th>Classification</th>
+                <th style="width: 25%">Scarcity Index</th>
+                <th>Beds</th>
+                <th>Blood</th>
+                <th>Amb</th>
+                <th>O₂</th>
+              </tr>
+            </thead>
+            <tbody id="hosp-tbody">
+              <tr><td colspan="8" class="loading"><span class="spin"></span>Syncing with Karnataka network...</td></tr>
+            </tbody>
+          </table>
+        </div>
+
       </div>
-    </div>
+    </section>
 
     <!-- THREAT VIEW -->
-    <div class="view" id="view-threats">
+    <section class="view" id="view-threats">
       <div class="threat-wrap">
-        <!-- left col: threats -->
-        <div class="tcol">
-          <div class="tcol-head">
-            <div class="tcol-title">Security Events</div>
-            <button class="atk-btn" onclick="simAttack()">⚠ INJECT ATTACK</button>
+        
+        <div class="tcol glass-card">
+          <div class="tcol-head" style="padding: 20px 20px 16px;">
+            <div class="tcol-title">Real-time Threat Intel</div>
+            <button class="btn-sm atk-btn" onclick="simAttack()">⚠ Inject Attack</button>
           </div>
-          <div class="tcol-scroll" id="threat-feed">
-            <div class="loading" style="font-size:10px;color:var(--ink3)">NO THREATS DETECTED — NETWORK SECURE</div>
-          </div>
-        </div>
-        <!-- right col: blockchain -->
-        <div class="tcol">
-          <div class="tcol-head">
-            <div class="tcol-title">Blockchain Audit Trail</div>
-            <button class="rst-btn" onclick="resetNet()">↺ RESET NETWORK</button>
-          </div>
-          <div class="tcol-scroll" id="chain-feed">
-            <div class="loading" style="font-size:10px;color:var(--ink3)">NO ALLOCATIONS RECORDED YET</div>
+          <div class="tcol-scroll" id="threat-feed" style="padding: 0 20px 20px;">
+            <div class="loading">NO THREATS DETECTED — SYSTEM SECURE</div>
           </div>
         </div>
-      </div>
-    </div>
+        
+        <div class="tcol glass-card">
+          <div class="tcol-head" style="padding: 20px 20px 16px;">
+            <div class="tcol-title">Immutable Ledger (Sepolia)</div>
+            <button class="btn-sm rst-btn" onclick="resetNet()">↺ Reset Grid</button>
+          </div>
+          <div class="tcol-scroll" id="chain-feed" style="padding: 0 20px 20px;">
+            <div class="loading">NO ALLOCATIONS LOGGED</div>
+          </div>
+        </div>
 
-  </div><!-- /main -->
-</div><!-- /body-area -->
-</div><!-- /shell -->
+      </div>
+    </section>
+
+  </main>
+</div>
+</div>
 
 <script>
+// --- CORE CONFIG ---
 const API = "https://plasmgrid-api.onrender.com";
 let map, nodes = [], markers = {}, activeCity = "ALL", searchQ = "";
 
-// ── MAP INIT ──────────────────────────────────────────────
+// --- INIT MAP ---
 function initMap() {
-  map = L.map("map",{zoomControl:false}).setView([14.5,76.0],7);
-
-  // ✅ Google Maps style tiles (clean & visible)
-  L.tileLayer("https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}", {
-    maxZoom: 20,
-    subdomains: ['mt0','mt1','mt2','mt3']
+  map = L.map("map", { zoomControl: false, attributionControl: false }).setView([14.5, 76.0], 7);
+  
+  // Custom Dark Map tiles for modern aesthetic
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    maxZoom: 19,
+    subdomains: 'abcd'
   }).addTo(map);
 
-  L.control.zoom({position:"bottomleft"}).addTo(map);
-
+  L.control.zoom({ position: "bottomleft" }).addTo(map);
   loadNodes();
 }
 
-// ── DATA ──────────────────────────────────────────────────
-async function loadNodes(){
-  try{
-    const r=await fetch(`${API}/nodes`);
-    nodes=await r.json();
+// --- DATA FETCHING ---
+let isWakingUp = false;
+
+async function loadNodes() {
+  let wakeTimer = null;
+  try {
+    // If it takes more than 2 seconds, assume the free-tier backend is asleep
+    wakeTimer = setTimeout(() => {
+      isWakingUp = true;
+      document.getElementById("hosp-tbody").innerHTML = `<tr><td colspan="8" class="loading"><span class="spin"></span>Waking up Render backend (can take ~50s on free tier)...</td></tr>`;
+    }, 2000);
+
+    const r = await fetch(`${API}/nodes`);
+    clearTimeout(wakeTimer);
+    isWakingUp = false;
+    
+    if (!r.ok) throw new Error("API not ok");
+    nodes = await r.json();
     refresh();
-  }catch(e){console.error("offline:",e)}
+  } catch(e) { 
+    console.error("API Error:", e);
+    if (wakeTimer) clearTimeout(wakeTimer);
+    
+    // If we were waking up and it failed (e.g. timeout), retry quietly
+    if (isWakingUp || nodes.length === 0) {
+      document.getElementById("hosp-tbody").innerHTML = `<tr><td colspan="8" class="loading" style="color:var(--status-warn)"><span class="spin" style="border-top-color:var(--status-warn)"></span>Still waking up backend... retrying...</td></tr>`;
+      setTimeout(loadNodes, 5000);
+    }
+  }
 }
 
-function refresh(){
+function refresh() {
   updateHdr();
   buildCityList();
   renderMap();
   renderTable();
 }
 
-function updateHdr(){
-  const crit=nodes.filter(n=>n.scarcity>65).length;
-  const warn=nodes.filter(n=>n.scarcity>35&&n.scarcity<=65).length;
-  const safe=nodes.filter(n=>n.scarcity<=35).length;
-  const cities=[...new Set(nodes.map(n=>n.city).filter(Boolean))].length;
-  set("h-nodes",nodes.length);
-  set("h-crit",crit);
-  set("h-cities",cities);
-  set("s-total",nodes.length);
-  set("s-crit",crit);
-  set("s-warn",warn);
-  set("s-safe",safe);
-  set("st-crit",crit);
-  set("st-warn",warn);
-  set("st-safe",safe);
-  set("st-total",nodes.length);
-  set("st-cities",cities);
+function updateHdr() {
+  const crit = nodes.filter(n => n.scarcity > 65).length;
+  const warn = nodes.filter(n => n.scarcity > 35 && n.scarcity <= 65).length;
+  const safe = nodes.filter(n => n.scarcity <= 35).length;
+  const cities = [...new Set(nodes.map(n => n.city).filter(Boolean))].length;
+  
+  set("h-nodes", nodes.length);
+  set("h-crit", crit);
+  set("s-total", nodes.length);
+  set("s-crit", crit);
+  set("s-warn", warn);
+  set("s-safe", safe);
+  set("st-crit", crit);
+  set("st-warn", warn);
+  set("st-safe", safe);
+  set("st-total", nodes.length);
+  set("st-cities", cities);
 }
 
-function set(id,v){const el=document.getElementById(id);if(el)el.textContent=v}
+function set(id, v) { const el = document.getElementById(id); if (el) el.textContent = v; }
 
-// ── CITY LIST ─────────────────────────────────────────────
-function buildCityList(){
-  const cities=[...new Set(nodes.map(n=>n.city).filter(Boolean))].sort();
-  document.getElementById("city-list").innerHTML=cities.map(c=>{
-    const cnt=nodes.filter(n=>n.city===c).length;
-    const crit=nodes.filter(n=>n.city===c&&n.scarcity>65).length;
-    return `<div class="side-row ${activeCity===c?'city-active':''}" onclick="jumpCity('${c}')">
+// --- SIDEBAR & SEARCH ---
+function buildCityList() {
+  const cities = [...new Set(nodes.map(n => n.city).filter(Boolean))].sort();
+  document.getElementById("city-list").innerHTML = cities.map(c => {
+    const cnt = nodes.filter(n => n.city === c).length;
+    const crit = nodes.filter(n => n.city === c && n.scarcity > 65).length;
+    return `<div class="side-row ${activeCity === c ? 'city-active' : ''}" onclick="jumpCity('${c}')">
       <span>${c}</span>
-      <span class="side-count ${crit>0?'red':'green'}">${cnt}</span>
+      <span class="side-count ${crit > 0 ? 'red' : 'green'}">${cnt}</span>
     </div>`;
   }).join("");
 }
 
-function jumpCity(city){
-  activeCity=city;
+function jumpCity(city) {
+  activeCity = city;
   buildCityList();
-  const cn=nodes.filter(n=>n.city===city);
-  if(!cn.length)return;
-  const lats=cn.map(n=>n.lat),lngs=cn.map(n=>n.lng);
-  if(map)map.setView([(Math.min(...lats)+Math.max(...lats))/2,(Math.min(...lngs)+Math.max(...lngs))/2],12);
-  if(document.getElementById("view-resources").classList.contains("on"))renderTable();
+  const cn = nodes.filter(n => n.city === city);
+  if (!cn.length) return;
+  const lats = cn.map(n => n.lat), lngs = cn.map(n => n.lng);
+  if (map) map.flyTo([(Math.min(...lats)+Math.max(...lats))/2, (Math.min(...lngs)+Math.max(...lngs))/2], 12, { duration: 1 });
+  if (document.getElementById("view-resources").classList.contains("on")) renderTable();
 }
 
-function filterCity(c){
-  activeCity=c;
+function filterCity(c) {
+  activeCity = c;
+  document.querySelectorAll('.side-section:first-child .side-row').forEach(el => el.classList.remove('city-active'));
+  if (c === 'ALL') document.querySelector('.side-section:first-child .side-row:nth-child(2)').classList.add('city-active');
   buildCityList();
-  if(map)map.setView([14.5,76.0],7);
+  if (map) map.flyTo([14.5, 76.0], 7, { duration: 1 });
   renderTable();
 }
 
-function filterSearch(q){
-  searchQ=q.toLowerCase();
+function filterSearch(q) {
+  searchQ = q.toLowerCase();
   renderTable();
 }
 
-// ── MAP ───────────────────────────────────────────────────
-function renderMap(){
-  Object.values(markers).forEach(m=>map.removeLayer(m));
-  markers={};
-  nodes.forEach(nd=>{
-    const s=nd.scarcity||0;
-    const c=s>65?"#ff1744":s>35?"#ff6d00":"#00ff88";
-    const sz=s>65?18:s>35?13:9;
-    const icon=L.divIcon({
-      className:"",
-      html:`<div style="width:${sz}px;height:${sz}px;border-radius:50%;background:${c};border:1px solid rgba(0,0,0,.5);box-shadow:0 0 ${s>65?16:8}px ${c}88;cursor:pointer"></div>`,
-      iconSize:[sz,sz],iconAnchor:[sz/2,sz/2]
+// --- RENDER MAP MARKERS ---
+function renderMap() {
+  Object.values(markers).forEach(m => map.removeLayer(m));
+  markers = {};
+  nodes.forEach(nd => {
+    const s = nd.scarcity || 0;
+    const c = s > 65 ? "var(--status-crit)" : s > 35 ? "var(--status-warn)" : "var(--status-safe)";
+    const glow = s > 65 ? "var(--status-crit-glow)" : s > 35 ? "var(--status-warn-glow)" : "var(--status-safe-glow)";
+    const sz = s > 65 ? 24 : s > 35 ? 18 : 12;
+    
+    const icon = L.divIcon({
+      className: "",
+      html: `<div style="width:${sz}px;height:${sz}px;border-radius:50%;background:${c};border:2px solid rgba(255,255,255,0.8);box-shadow:0 0 16px ${glow}, 0 0 32px ${glow};cursor:pointer; transition: transform 0.2s;"></div>`,
+      iconSize: [sz, sz], iconAnchor: [sz/2, sz/2]
     });
-    const m=L.marker([nd.lat,nd.lng],{icon}).addTo(map).bindPopup(`
+    
+    const m = L.marker([nd.lat, nd.lng], { icon }).addTo(map).bindPopup(`
       <div class="lp-name">${nd.name}</div>
-      <div class="lp-city">${nd.city||""}</div>
-      <div class="lp-row">Beds <span>${nd.beds_available??'—'}</span></div>
-      <div class="lp-row">Blood units <span>${nd.blood_units??'—'}</span></div>
-      <div class="lp-row">Ambulances <span>${nd.ambulances??'—'}</span></div>
-      <div class="lp-row">Oxygen <span>${nd.oxygen_cylinders??'—'}</span></div>
-      <div class="lp-sc" style="color:${c}">${s}/100</div>
-      <div class="lp-bar"><div class="lp-fill" style="width:${s}%;background:${c}"></div></div>
+      <div class="lp-city">${nd.city || "Karnataka"}</div>
+      <div class="lp-row">Beds <span>${nd.beds_available ?? '—'}</span></div>
+      <div class="lp-row">Blood units <span>${nd.blood_units ?? '—'}</span></div>
+      <div class="lp-row">Ambulances <span>${nd.ambulances ?? '—'}</span></div>
+      <div class="lp-row">Oxygen <span>${nd.oxygen_cylinders ?? '—'}</span></div>
+      <div class="lp-sc" style="color:${c}">${s}<span style="font-size:12px;color:var(--text-muted)">/100</span></div>
+      <div class="sc-bar-wrap" style="height:4px;margin-top:8px"><div class="sc-bar-fill" style="width:${s}%;background:${c}"></div></div>
     `);
-    markers[nd.id]=m;
+    
+    // Add hover effect
+    m.on('mouseover', function(e) { this.openPopup(); });
+    markers[nd.id] = m;
   });
 }
 
-// ── TABLE ─────────────────────────────────────────────────
-function renderTable(){
-  let list=nodes;
-  if(activeCity!=="ALL")list=list.filter(n=>n.city===activeCity);
-  if(searchQ)list=list.filter(n=>(n.name+n.city+n.area).toLowerCase().includes(searchQ));
+// --- RENDER TABLE ---
+function renderTable() {
+  let list = nodes;
+  if (activeCity !== "ALL") list = list.filter(n => n.city === activeCity);
+  if (searchQ) list = list.filter(n => (n.name + n.city + (n.area||"")).toLowerCase().includes(searchQ));
 
-  const tc={government:"tc-gov",private:"tc-pvt",blood_bank:"tc-blood",ambulance_depot:"tc-depot"};
-  const tl={government:"Gov",private:"Pvt",blood_bank:"Blood",ambulance_depot:"Depot"};
+  const tc = { government: "tc-gov", private: "tc-pvt", blood_bank: "tc-blood", ambulance_depot: "tc-depot" };
+  const tl = { government: "Gov", private: "Private", blood_bank: "Blood Bank", ambulance_depot: "Depot" };
 
-  document.getElementById("hosp-tbody").innerHTML=list.map(nd=>{
-    const s=nd.scarcity??0;
-    const c=s>65?"var(--danger)":s>35?"var(--warn)":"var(--accent)";
-    const bc=s>65?"hf-crit":s>35?"hf-warn":"hf-safe";
-    const barStyle=`width:${s}%;background:${s>65?"var(--danger)":s>35?"var(--warn)":"var(--accent)"}`;
+  document.getElementById("hosp-tbody").innerHTML = list.map(nd => {
+    const s = nd.scarcity ?? 0;
+    const c = s > 65 ? "var(--status-crit)" : s > 35 ? "var(--status-warn)" : "var(--status-safe)";
     return `<tr>
-      <td><div style="font-weight:500;color:var(--ink)">${nd.name}</div><div class="city-chip">${nd.area||''}</div></td>
-      <td style="color:var(--accent);font-size:10px">${nd.city||''}</td>
-      <td><span class="type-chip ${tc[nd.type]||'tc-gov'}">${tl[nd.type]||'—'}</span></td>
+      <td><div style="font-weight:600;color:#fff">${nd.name}</div><div class="city-chip">${nd.area || ''}</div></td>
+      <td style="color:var(--text-muted);font-weight:500">${nd.city || ''}</td>
+      <td><span class="type-chip ${tc[nd.type] || 'tc-gov'}">${tl[nd.type] || '—'}</span></td>
       <td>
-        <div style="display:flex;align-items:center;gap:8px">
-          <span style="color:${c};font-weight:700;min-width:28px">${s}</span>
-          <div class="sc-bar-wrap"><div class="sc-bar-fill" style="${barStyle}"></div></div>
+        <div style="display:flex;align-items:center;gap:12px">
+          <span style="color:${c};font-weight:700;font-family:var(--font-mono);min-width:32px;text-shadow:0 0 8px ${c}40">${s}</span>
+          <div class="sc-bar-wrap"><div class="sc-bar-fill" style="width:${s}%;background:${c};box-shadow:0 0 8px ${c}"></div></div>
         </div>
       </td>
-      <td>${nd.beds_available??'—'}</td>
-      <td>${nd.blood_units??'—'}</td>
-      <td>${nd.ambulances??'—'}</td>
-      <td>${nd.oxygen_cylinders??'—'}</td>
+      <td style="font-family:var(--font-mono)">${nd.beds_available ?? '—'}</td>
+      <td style="font-family:var(--font-mono)">${nd.blood_units ?? '—'}</td>
+      <td style="font-family:var(--font-mono)">${nd.ambulances ?? '—'}</td>
+      <td style="font-family:var(--font-mono)">${nd.oxygen_cylinders ?? '—'}</td>
     </tr>`;
-  }).join("") || `<tr><td colspan="8" style="text-align:center;padding:20px;color:var(--ink3);font-size:11px">No nodes match filter</td></tr>`;
+  }).join("") || `<tr><td colspan="8" class="loading">No facilities match criteria.</td></tr>`;
 }
 
-// ── ALLOCATION ────────────────────────────────────────────
-async function runAlloc(){
-  const btn=document.getElementById("runBtn");
-  const wrap=document.getElementById("result-wrap");
-  btn.disabled=true;btn.textContent="ANALYSING KARNATAKA...";
-  wrap.innerHTML='<div class="result-banner"><div class="loading"><span class="spin"></span>AI analysing 43 nodes across Karnataka...</div></div>';
+// --- ALLOCATION LOGIC ---
+async function runAlloc() {
+  const btn = document.getElementById("runBtn");
+  const wrap = document.getElementById("result-wrap");
+  btn.disabled = true; btn.textContent = "SYNTHESIZING DATA...";
+  wrap.innerHTML = '<div class="result-banner glass-card" style="margin-bottom: 24px"><div class="loading"><span class="spin"></span>AI processing network telemetry...</div></div>';
 
-  try{
-    const r=await fetch(`${API}/allocate`,{method:"POST"});
-    const data=await r.json();
-    const g=data.gemini||{};
-    const uc=g.urgency==="CRITICAL"?"tag-crit":g.urgency==="HIGH"?"tag-high":g.urgency==="MEDIUM"?"tag-med":"tag-low";
+  try {
+    const r = await fetch(`${API}/allocate`, { method: "POST" });
+    const data = await r.json();
+    const g = data.gemini || {};
+    const uc = g.urgency === "CRITICAL" ? "tag-crit" : g.urgency === "HIGH" ? "tag-high" : g.urgency === "MEDIUM" ? "tag-med" : "tag-low";
 
-    const tHTML=(g.transfers||[]).map(t=>`
+    const tHTML = (g.transfers || []).map(t => `
       <div class="tx-card">
         <div class="tx-top">
           <span class="tx-from">↑ ${t.from}</span>
-          <span class="tx-arr">——→</span>
+          <span class="tx-arr">→</span>
           <span class="tx-to">↓ ${t.to}</span>
           <span class="tx-res">${t.resource} ×${t.amount}</span>
         </div>
         <div class="tx-why">${t.reason}</div>
-        <div class="tx-time">est. ${t.estimated_time_minutes} min</div>
+        <div class="tx-time">ETA: ${t.estimated_time_minutes} mins</div>
       </div>`).join("");
 
-    const sHTML=(data.slime||[]).slice(0,4).map(s=>`
-      <div class="slime-r">🧫 <span style="color:var(--accent)">${s.from}</span> → <span style="color:var(--danger)">${s.to}</span> | ${s.distance_km}km | score:${s.priority_score}</div>`).join("");
+    const sHTML = (data.slime || []).slice(0, 3).map(s => `
+      <div class="slime-r">🧫 <span style="color:var(--status-safe);font-weight:600">${s.from}</span> → <span style="color:var(--status-crit);font-weight:600">${s.to}</span> <span style="margin-left:auto;font-family:var(--font-mono)">${s.distance_km}km | score:${s.priority_score}</span></div>`).join("");
 
-    if(data.blockchain&&data.blockchain.length)data.blockchain.forEach(b=>addChain(b,g));
-    else addChain(null,g);
+    if (data.blockchain && data.blockchain.length) data.blockchain.forEach(b => addChain(b, g));
+    else addChain(null, g);
 
-    wrap.innerHTML=`<div class="result-banner">
+    wrap.innerHTML = `<div class="result-banner glass-card" style="margin-bottom: 24px">
       <div class="rb-head">
-        <span class="tag ${uc}">${g.urgency||'UNKNOWN'}</span>
-        <span class="tag tag-ai">🤖 ${data.ai_used||'AI'}</span>
-        <span class="tag tag-lives">⚠ ${g.lives_at_risk||0} LIVES AT RISK</span>
+        <span class="tag ${uc}">${g.urgency || 'UNKNOWN STATUS'}</span>
+        <span class="tag tag-ai">🤖 ${data.ai_used || 'AI ENGINE'}</span>
+        <span class="tag tag-lives">⚠ ${g.lives_at_risk || 0} LIVES AT RISK</span>
       </div>
-      <div class="rb-summary">${g.summary||'Analysis complete.'}</div>
-      <div class="rb-section">AI Recommended Transfers — Karnataka Network</div>
-      ${tHTML||'<div style="font-size:11px;color:var(--ink3)">No critical transfers needed.</div>'}
-      <div class="slime-rows">
-        <div class="rb-section" style="margin-bottom:5px">Physarum Biological Routing</div>
-        ${sHTML||'<div style="font-size:10px;color:var(--ink3)">No paths computed.</div>'}
+      <div class="rb-summary">${g.summary || 'Analysis complete.'}</div>
+      
+      <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:12px;font-weight:600">Recommended Dispatch Routes</div>
+      <div class="tx-grid">${tHTML || '<div class="loading" style="padding:20px">No critical transfers required at this time.</div>'}</div>
+      
+      <div class="slime-box">
+        <div style="font-size:11px;color:var(--status-safe);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px;font-weight:700">Physarum Biological Routing</div>
+        ${sHTML || '<div style="font-size:12px;color:var(--text-muted)">No active pathways computed.</div>'}
       </div>
-      <div class="chain-confirm">✓ LOGGED → ETHEREUM SEPOLIA → IMMUTABLE RECORD</div>
+      
+      <div class="chain-confirm">✓ SECURED ON ETHEREUM SEPOLIA (IMMUTABLE LEDGER)</div>
     </div>`;
-  }catch(e){
-    wrap.innerHTML=`<div class="err">ERROR: Cannot reach backend at ${API} — run: python backend/app.py</div>`;
+  } catch(e) {
+    wrap.innerHTML = `<div class="err glass-card" style="margin-bottom:24px">CONNECTION FAILED: Backend unreachable at ${API}. Ensure server is running.</div>`;
   }
-  btn.disabled=false;btn.textContent="⚡ RUN AI ALLOCATION";
+  btn.disabled = false; btn.textContent = "⚡ Initialize Allocation";
 }
 
-// ── THREAT / CHAIN ────────────────────────────────────────
-async function simAttack(){
-  try{
-    const r=await fetch(`${API}/update-node`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:"manipal_blr",scarcity:99})});
-    const data=await r.json();
-    if(data.threat_detected){
-      addThreat({node:"Manipal Hospital Bengaluru",threat_type:data.threat.threat_type||"SPOOFED_DATA",confidence:data.threat.confidence||95,reason:data.threat.reason||"Impossible change",old_scarcity:20,new_scarcity:99,action:data.threat.action||"QUARANTINED",timestamp:new Date().toISOString()});
-      alert("IMMUNE LAYER ACTIVATED\n\nSpoofed data quarantined.\nKarnataka network protected.");
-    }else alert("Simulation ran — threat not caught.");
-  }catch(e){alert("Cannot connect to backend.\nRun: python backend/app.py")}
+// --- THREAT SIMULATION ---
+async function simAttack() {
+  try {
+    const r = await fetch(`${API}/update-node`, {
+      method: "POST", headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({id: "manipal_blr", scarcity: 99})
+    });
+    const data = await r.json();
+    if (data.threat_detected) {
+      addThreat({
+        node: "Manipal Hospital Bengaluru", threat_type: data.threat.threat_type || "SPOOFED_DATA",
+        confidence: data.threat.confidence || 95, reason: data.threat.reason || "Anomalous spike in scarcity",
+        old_scarcity: 20, new_scarcity: 99, action: data.threat.action || "QUARANTINED", timestamp: new Date().toISOString()
+      });
+      alert("IMMUNE SYSTEM ENGAGED\n\nMalicious data mutation quarantined.\nNetwork integrity maintained.");
+    } else alert("Simulation complete — no anomalies flagged.");
+  } catch(e) { alert("API Connection Failed.\nVerify backend server status.") }
 }
 
-function addThreat(t){
-  const f=document.getElementById("threat-feed");
-  if(f.querySelector(".loading"))f.innerHTML="";
-  const d=document.createElement("div");d.className="threat-card";
-  d.innerHTML=`<div class="tc-type">🚨 ${t.threat_type}</div>
-    <div class="tc-body">Node: <strong style="color:#fff">${t.node}</strong><br>${t.old_scarcity} → ${t.new_scarcity}<br>${t.reason||""}</div>
-    <div class="tc-meta">CONFIDENCE ${t.confidence}% | ${new Date(t.timestamp).toLocaleTimeString()}</div>
+function addThreat(t) {
+  const f = document.getElementById("threat-feed");
+  if (f.querySelector(".loading")) f.innerHTML = "";
+  const d = document.createElement("div"); d.className = "threat-card";
+  d.innerHTML = `
+    <div class="tc-type">🚨 ${t.threat_type}</div>
+    <div class="tc-body">Target: <strong style="color:#fff">${t.node}</strong><br>Scarcity Jump: <span style="font-family:var(--font-mono)">${t.old_scarcity} → ${t.new_scarcity}</span><br><span style="color:var(--text-muted);font-size:12px">${t.reason || ""}</span></div>
+    <div class="tc-meta">CONFIDENCE ${t.confidence}% • ${new Date(t.timestamp).toLocaleTimeString()}</div>
     <span class="q-badge">🔒 ${t.action}</span>`;
-  f.insertBefore(d,f.firstChild);
+  f.insertBefore(d, f.firstChild);
 }
 
-function addChain(b,g){
-  const f=document.getElementById("chain-feed");
-  if(f.querySelector(".loading"))f.innerHTML="";
-  const hash=b?.hash||("0x"+[...Array(32)].map(()=>Math.floor(Math.random()*16).toString(16)).join(""));
-  const link=b?.etherscan||`https://sepolia.etherscan.io/tx/${hash}`;
-  const d=document.createElement("div");d.className="chain-card";
-  d.innerHTML=`<div class="chain-hash">${hash}</div>
-    <div class="chain-meta">SEPOLIA TESTNET | ${new Date().toLocaleTimeString()}<br>URGENCY: ${g?.urgency||'—'} | TRANSFERS: ${(g?.transfers||[]).length}<br><a href="${link}" target="_blank" class="chain-link">→ ETHERSCAN</a></div>`;
-  f.insertBefore(d,f.firstChild);
+function addChain(b, g) {
+  const f = document.getElementById("chain-feed");
+  if (f.querySelector(".loading")) f.innerHTML = "";
+  const hash = b?.hash || ("0x" + [...Array(64)].map(() => Math.floor(Math.random()*16).toString(16)).join(""));
+  const link = b?.etherscan || `https://sepolia.etherscan.io/tx/${hash}`;
+  const d = document.createElement("div"); d.className = "chain-card";
+  d.innerHTML = `
+    <div class="chain-hash">${hash}</div>
+    <div class="chain-meta">NETWORK: SEPOLIA TESTNET<br>TIMESTAMP: ${new Date().toLocaleTimeString()}<br>URGENCY: <span style="color:#fff;font-weight:600">${g?.urgency || '—'}</span><br>TRANSFERS: ${(g?.transfers || []).length}</div>
+    <a href="${link}" target="_blank" class="chain-link">View on Etherscan →</a>`;
+  f.insertBefore(d, f.firstChild);
 }
 
-async function loadThreats(){
-  try{
-    const r=await fetch(`${API}/threats`);
-    const t=await r.json();
-    const f=document.getElementById("threat-feed");
-    if(!t.length){f.innerHTML='<div class="loading" style="font-size:10px;color:var(--ink3)">NO THREATS DETECTED — NETWORK SECURE</div>';return}
-    f.innerHTML=t.map(x=>`<div class="threat-card">
-      <div class="tc-type">🚨 ${x.threat_type||'UNKNOWN'}</div>
-      <div class="tc-body">Node: <strong style="color:#fff">${x.node||x.node_id}</strong><br>${x.old_scarcity} → ${x.new_scarcity}<br>${x.reason||''}</div>
-      <div class="tc-meta">CONFIDENCE ${x.confidence||0}%</div>
-      <span class="q-badge">🔒 ${x.action||'QUARANTINED'}</span>
+async function loadThreats() {
+  try {
+    const r = await fetch(`${API}/threats`);
+    const t = await r.json();
+    const f = document.getElementById("threat-feed");
+    if (!t.length) { f.innerHTML = '<div class="loading">NO THREATS DETECTED — SYSTEM SECURE</div>'; return; }
+    f.innerHTML = t.map(x => `<div class="threat-card">
+      <div class="tc-type">🚨 ${x.threat_type || 'UNKNOWN ANOMALY'}</div>
+      <div class="tc-body">Target: <strong style="color:#fff">${x.node || x.node_id}</strong><br>Metrics: <span style="font-family:var(--font-mono)">${x.old_scarcity} → ${x.new_scarcity}</span><br><span style="color:var(--text-muted);font-size:12px">${x.reason || ''}</span></div>
+      <div class="tc-meta">CONFIDENCE ${x.confidence || 0}%</div>
+      <span class="q-badge">🔒 ${x.action || 'QUARANTINED'}</span>
     </div>`).join("");
-  }catch(e){}
+  } catch(e) {}
 }
 
-async function resetNet(){
-  if(!confirm("Reset Karnataka network to starting state?"))return;
-  const s={victoria:72,bowring:45,kc_general:28,jayadeva:81,nimhans:33,esi_blr:55,manipal_blr:20,fortis_blr:38,apollo_blr:62,narayana:25,columbia_blr:49,sakra:67,rotary_ttk:18,stjohns_bb:30,cats_depot:15,mysuru_general:68,jssh_mysuru:42,cheluvamba:74,mysuru_bb:22,wenlock:76,kmc_manipal:35,father_muller:40,mangaluru_bb:28,kims_hubli:58,district_hubli:71,sdm_dharwad:44,hubli_bb:32,belgaum_general:65,kle_belgaum:38,tumkur_general:70,siddaganga_tumkur:45,gulbarga_general:78,esic_gulbarga:60,mcgann_shimoga:66,manipal_shimoga:40,bapuji_davangere:52,chigateri_davangere:73,vims_ballari:69,hassan_general:61,udupi_district:47,kasturba_manipal:30,karnataka_108_hub:12,ksbb_state:15};
-  for(const [id,scarcity] of Object.entries(s)){
-    await fetch(`${API}/update-node`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id,scarcity})});
+async function resetNet() {
+  if (!confirm("Confirm network baseline reset? All local mutations will be purged.")) return;
+  const s = { victoria: 72, bowring: 45, kc_general: 28, jayadeva: 81, nimhans: 33, esi_blr: 55, manipal_blr: 20, fortis_blr: 38, apollo_blr: 62, narayana: 25, columbia_blr: 49, sakra: 67, rotary_ttk: 18, stjohns_bb: 30, cats_depot: 15, mysuru_general: 68, jssh_mysuru: 42, cheluvamba: 74, mysuru_bb: 22, wenlock: 76, kmc_manipal: 35, father_muller: 40, mangaluru_bb: 28, kims_hubli: 58, district_hubli: 71, sdm_dharwad: 44, hubli_bb: 32, belgaum_general: 65, kle_belgaum: 38, tumkur_general: 70, siddaganga_tumkur: 45, gulbarga_general: 78, esic_gulbarga: 60, mcgann_shimoga: 66, manipal_shimoga: 40, bapuji_davangere: 52, chigateri_davangere: 73, vims_ballari: 69, hassan_general: 61, udupi_district: 47, kasturba_manipal: 30, karnataka_108_hub: 12, ksbb_state: 15 };
+  for (const [id, scarcity] of Object.entries(s)) {
+    await fetch(`${API}/update-node`, { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({id, scarcity}) });
   }
   await loadNodes();
-  alert("✅ Karnataka network reset");
+  alert("Network reset to baseline.");
 }
 
-// ── VIEW SWITCH ───────────────────────────────────────────
-function view(id,el){
-  document.querySelectorAll(".view").forEach(v=>v.classList.remove("on"));
-  document.querySelectorAll(".nb").forEach(b=>b.classList.remove("on"));
+// --- VIEW ROUTING ---
+function view(id, el) {
+  document.querySelectorAll(".view").forEach(v => v.classList.remove("on"));
+  document.querySelectorAll(".nb").forEach(b => b.classList.remove("on"));
   document.getElementById(`view-${id}`).classList.add("on");
-  if(el)el.classList.add("on");
-  if(id==="map"&&map)setTimeout(()=>map.invalidateSize(),50);
-  if(id==="threats")loadThreats();
+  if (el) el.classList.add("on");
+  if (id === "map" && map) setTimeout(() => map.invalidateSize(), 50);
+  if (id === "threats") loadThreats();
 }
 
-// ── AUTO REFRESH ──────────────────────────────────────────
-setInterval(loadNodes,15000);
+// --- LIFECYCLE ---
+setInterval(loadNodes, 15000); // 15s polling
 initMap();
 </script>
 </body>
