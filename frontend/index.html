@@ -556,13 +556,25 @@ function showLeafletMap(city) {
   
   cityNodes.forEach(n => {
     const isCrit = (n.scarcity || 0) > 65;
+    const color = isCrit ? 'var(--status-crit)' : 'var(--accent-cyan)';
     const icon = L.divIcon({
-      className: `l-marker ${isCrit ? 'crit' : ''}`,
-      html: isCrit ? `⚠ ${n.name}` : `🏥 ${n.name}`,
-      iconSize: null,
-      iconAnchor: [0, 0]
+      className: 'custom-l-icon',
+      html: `<div class="map-dot" style="color:${color}"></div>`,
+      iconSize: [16, 16],
+      iconAnchor: [8, 8]
     });
     const marker = L.marker([n.lat, n.lng], { icon }).addTo(lMap);
+    
+    const tooltipHtml = `
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span style="color:${color}; font-size:16px;">${isCrit ? '⚠' : '🏥'}</span>
+        <div style="display:flex; flex-direction:column;">
+          <span style="font-size:14px; color:#fff;">${n.name}</span>
+          <span style="font-size:10px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.1em; margin-top:2px;">Scarcity Index: <span style="color:${color}; font-weight:800;">${n.scarcity || 0}/100</span></span>
+        </div>
+      </div>
+    `;
+    marker.bindTooltip(tooltipHtml, { className: 'l-tooltip', direction: 'top', offset: [0, -10] });
     lMarkers.push(marker);
   });
 }
@@ -594,21 +606,6 @@ function initGlobe() {
     .pointRadius(d => d.isCity ? 0.3 : ((d.scarcity || 0) > 65 ? 0.08 : 0.05))
     .pointResolution(32)
     .pointsMerge(false)
-    
-    // Premium HTML markers
-    .htmlElementsData([])
-    .htmlElement(d => {
-      const el = document.createElement('div');
-      const s = d.isCity ? d.maxS : (d.scarcity || 0);
-      const isCrit = s > 65;
-      const c = isCrit ? '#ff2a2a' : '#00e5ff';
-      if (d.isCity) {
-        el.innerHTML = `<div style="color: ${c}; text-shadow: 0 0 10px ${c}; font-family: var(--font-ui); font-size: 13px; font-weight: 800; transform: translate(-50%, -100%); pointer-events: none; background: rgba(0,0,0,0.6); padding: 4px 10px; border-radius: 6px; border: 1px solid ${c}40;">📍 ${d.city} <span style="opacity:0.8;font-size:10px">(${d.count})</span></div>`;
-      } else if (isCrit) {
-        el.innerHTML = `<div style="color: #ff2a2a; text-shadow: 0 0 10px #ff2a2a; font-family: var(--font-mono); font-size: 10px; font-weight: 800; transform: translate(-50%, -100%); pointer-events: none; letter-spacing: 1px; background: rgba(0,0,0,0.6); padding: 4px 8px; border-radius: 4px; border: 1px solid rgba(255,42,42,0.3);">⚠ ${d.name}</div>`;
-      }
-      return el;
-    })
     
     // Rings
     .ringLat('lat')
@@ -866,8 +863,7 @@ function renderGlobeData() {
     
     world.pointsData(clusters);
     world.ringsData(clusters.filter(c => c.maxS > 65));
-    world.arcsData([]); 
-    world.htmlElementsData(clusters);
+    world.arcsData([]);
   } else {
     const cityNodes = globeCity ? nodes.filter(n => n.city === globeCity) : nodes;
     world.pointsData(cityNodes);
@@ -887,7 +883,6 @@ function renderGlobeData() {
       }
     }
     world.arcsData(arcs);
-    world.htmlElementsData(cityNodes);
   }
 }
 
