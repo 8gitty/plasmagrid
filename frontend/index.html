@@ -648,9 +648,9 @@ function initGlobe() {
           globeMode = 'nodes';
           globeCity = node.city;
           renderGlobeData();
-          world.pointOfView({ lat: node.lat, lng: node.lng, altitude: 0.15 }, 1500);
+          world.pointOfView({ lat: node.lat, lng: node.lng, altitude: 0.03 }, 1500);
         } else {
-          world.pointOfView({ lat: node.lat, lng: node.lng, altitude: 0.05 }, 1500);
+          world.pointOfView({ lat: node.lat, lng: node.lng, altitude: 0.005 }, 1500);
           setTimeout(() => {
             window.open(`https://www.google.com/maps/search/?api=1&query=${node.lat},${node.lng}`, '_blank');
           }, 1500);
@@ -770,7 +770,7 @@ function jumpCity(city) {
   globeCity = city;
   renderGlobeData();
   
-  world.pointOfView({ lat: targetLat, lng: targetLng, altitude: 0.2 }, 2000);
+  world.pointOfView({ lat: targetLat, lng: targetLng, altitude: 0.03 }, 2000);
   if (document.getElementById("view-resources").classList.contains("on")) renderTable();
 }
 
