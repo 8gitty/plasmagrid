@@ -509,6 +509,8 @@ html, body {
 const API = "https://plasmgrid-api.onrender.com";
 let nodes = [], activeCity = "ALL", searchQ = "";
 let world; // Globe instance
+let globeMode = 'cities'; // 'cities' or 'nodes'
+let globeCity = null;
 
 // --- INIT GLOBE ---
 function initGlobe() {
@@ -525,45 +527,49 @@ function initGlobe() {
     .pointLng('lng')
     .pointAltitude(0.01) // Flat markers instead of poles
     .pointColor(d => {
-      const s = d.scarcity || 0;
+      const s = d.isCity ? d.maxS : (d.scarcity || 0);
       return s > 65 ? '#ff2a2a' : s > 35 ? '#fb923c' : '#00e5ff';
     })
-    .pointRadius(d => (d.scarcity || 0) > 65 ? 0.3 : 0.15)
+    .pointRadius(d => d.isCity ? 0.3 : ((d.scarcity || 0) > 65 ? 0.08 : 0.05))
     .pointResolution(32)
     .pointsMerge(false)
     
-    // Premium HTML markers for critical nodes
-    .htmlElementsData(nodes)
+    // Premium HTML markers
+    .htmlElementsData([])
     .htmlElement(d => {
       const el = document.createElement('div');
-      const s = d.scarcity || 0;
-      if (s > 65) {
-        el.innerHTML = `<div style="color: #ff2a2a; text-shadow: 0 0 10px #ff2a2a; font-family: var(--font-mono); font-size: 11px; font-weight: 800; transform: translate(-50%, -100%); pointer-events: none; letter-spacing: 1px; background: rgba(0,0,0,0.6); padding: 4px 8px; border-radius: 4px; border: 1px solid rgba(255,42,42,0.3);">⚠ ${d.name}</div>`;
+      const s = d.isCity ? d.maxS : (d.scarcity || 0);
+      const isCrit = s > 65;
+      const c = isCrit ? '#ff2a2a' : '#00e5ff';
+      if (d.isCity) {
+        el.innerHTML = `<div style="color: ${c}; text-shadow: 0 0 10px ${c}; font-family: var(--font-ui); font-size: 13px; font-weight: 800; transform: translate(-50%, -100%); pointer-events: none; background: rgba(0,0,0,0.6); padding: 4px 10px; border-radius: 6px; border: 1px solid ${c}40;">📍 ${d.city} <span style="opacity:0.8;font-size:10px">(${d.count})</span></div>`;
+      } else if (isCrit) {
+        el.innerHTML = `<div style="color: #ff2a2a; text-shadow: 0 0 10px #ff2a2a; font-family: var(--font-mono); font-size: 10px; font-weight: 800; transform: translate(-50%, -100%); pointer-events: none; letter-spacing: 1px; background: rgba(0,0,0,0.6); padding: 4px 8px; border-radius: 4px; border: 1px solid rgba(255,42,42,0.3);">⚠ ${d.name}</div>`;
       }
       return el;
     })
     
-    // Rings for critical nodes
+    // Rings
     .ringLat('lat')
     .ringLng('lng')
     .ringColor(d => {
-       const s = d.scarcity || 0;
+       const s = d.isCity ? d.maxS : (d.scarcity || 0);
        return s > 65 ? '#ff2a2a' : s > 35 ? '#fb923c' : '#00e5ff';
     })
-    .ringMaxRadius(d => (d.scarcity || 0) > 65 ? 2.5 : 1.5)
+    .ringMaxRadius(d => d.isCity ? 1.0 : ((d.scarcity || 0) > 65 ? 0.5 : 0.2))
     .ringPropagationSpeed(1.5)
     .ringRepeatPeriod(800)
     
-    // Arcs for network traffic
+    // Arcs
     .arcStartLat(d => d.startLat)
     .arcStartLng(d => d.startLng)
     .arcEndLat(d => d.endLat)
     .arcEndLng(d => d.endLng)
     .arcColor(d => d.color)
-    .arcDashLength(0.4)
-    .arcDashGap(0.2)
+    .arcDashLength(0.05)
+    .arcDashGap(0.1)
     .arcDashAnimateTime(1500)
-    .arcStroke(0.6)
+    .arcStroke(0.15)
 
     // Interaction
     .onPointHover(node => {
@@ -571,7 +577,7 @@ function initGlobe() {
       document.body.style.cursor = node ? 'crosshair' : 'default';
       
       if (node) {
-        const s = node.scarcity || 0;
+        const s = node.isCity ? node.maxS : (node.scarcity || 0);
         const isCrit = s > 65;
         const c = isCrit ? "var(--status-crit)" : s > 35 ? "var(--status-warn)" : "var(--accent-cyan)";
         const glow = isCrit ? "var(--status-crit-glow)" : s > 35 ? "var(--status-warn-glow)" : "var(--accent-cyan-glow)";
@@ -579,44 +585,58 @@ function initGlobe() {
         hud.style.borderTopColor = c;
         hud.style.boxShadow = `0 30px 60px rgba(0,0,0,0.8), 0 0 40px ${glow}`;
         
-        hud.innerHTML = `
-          <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.3em;margin-bottom:16px;display:flex;align-items:center;gap:10px">
-            <div style="position:relative;width:8px;height:8px">
-              <div style="position:absolute;inset:0;background:${c};border-radius:50%;box-shadow:0 0 16px ${c}"></div>
-              <div style="position:absolute;inset:-4px;border:1px solid ${c};border-radius:50%;animation:ping 2s cubic-bezier(0,0,0.2,1) infinite"></div>
+        if (node.isCity) {
+          hud.innerHTML = `
+            <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.3em;margin-bottom:16px;display:flex;align-items:center;gap:10px">
+              <span style="font-family:var(--font-mono);font-weight:700">CITY CLUSTER TARGETED</span>
             </div>
-            <span style="font-family:var(--font-mono);font-weight:700">TELEMETRY LOCK</span>
-          </div>
-          <div style="font-family:var(--font-ui);font-size:22px;font-weight:700;color:#fff;margin-bottom:4px;letter-spacing:0.02em;line-height:1.2">${node.name}</div>
-          <div style="font-size:12px;color:${c};text-transform:uppercase;letter-spacing:0.2em;margin-bottom:24px;font-weight:700">${node.city || "Karnataka"} ZONE</div>
-          
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px">
-            <div style="background:rgba(255,255,255,0.03);padding:12px;border-radius:8px;border:1px solid rgba(255,255,255,0.05)">
-              <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px">Beds</div>
-              <div style="font-family:var(--font-mono);font-size:18px;font-weight:700;color:#fff">${node.beds_available ?? '—'}</div>
+            <div style="font-family:var(--font-ui);font-size:22px;font-weight:700;color:#fff;margin-bottom:4px;letter-spacing:0.02em;line-height:1.2">${node.city}</div>
+            <div style="font-size:12px;color:${c};text-transform:uppercase;letter-spacing:0.2em;margin-bottom:24px;font-weight:700">${node.count} ACTIVE NODES</div>
+            
+            <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:8px">Max Scarcity Detected</div>
+            <div style="font-family:var(--font-mono);font-size:36px;font-weight:700;color:${c};line-height:1;text-shadow:0 0 24px ${glow};margin-bottom:16px">${s}<span style="font-size:14px;color:var(--text-dark);text-shadow:none">/100</span></div>
+            <div style="color:var(--text-muted);font-size:12px;font-style:italic">Click to expand cluster...</div>
+          `;
+        } else {
+          hud.innerHTML = `
+            <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.3em;margin-bottom:16px;display:flex;align-items:center;gap:10px">
+              <div style="position:relative;width:8px;height:8px">
+                <div style="position:absolute;inset:0;background:${c};border-radius:50%;box-shadow:0 0 16px ${c}"></div>
+                <div style="position:absolute;inset:-4px;border:1px solid ${c};border-radius:50%;animation:ping 2s cubic-bezier(0,0,0.2,1) infinite"></div>
+              </div>
+              <span style="font-family:var(--font-mono);font-weight:700">TELEMETRY LOCK</span>
             </div>
-            <div style="background:rgba(255,255,255,0.03);padding:12px;border-radius:8px;border:1px solid rgba(255,255,255,0.05)">
-              <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px">Blood</div>
-              <div style="font-family:var(--font-mono);font-size:18px;font-weight:700;color:#fff">${node.blood_units ?? '—'}</div>
+            <div style="font-family:var(--font-ui);font-size:22px;font-weight:700;color:#fff;margin-bottom:4px;letter-spacing:0.02em;line-height:1.2">${node.name}</div>
+            <div style="font-size:12px;color:${c};text-transform:uppercase;letter-spacing:0.2em;margin-bottom:24px;font-weight:700">${node.city || "Karnataka"} ZONE</div>
+            
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px">
+              <div style="background:rgba(255,255,255,0.03);padding:12px;border-radius:8px;border:1px solid rgba(255,255,255,0.05)">
+                <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px">Beds</div>
+                <div style="font-family:var(--font-mono);font-size:18px;font-weight:700;color:#fff">${node.beds_available ?? '—'}</div>
+              </div>
+              <div style="background:rgba(255,255,255,0.03);padding:12px;border-radius:8px;border:1px solid rgba(255,255,255,0.05)">
+                <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px">Blood</div>
+                <div style="font-family:var(--font-mono);font-size:18px;font-weight:700;color:#fff">${node.blood_units ?? '—'}</div>
+              </div>
+              <div style="background:rgba(255,255,255,0.03);padding:12px;border-radius:8px;border:1px solid rgba(255,255,255,0.05)">
+                <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px">O2 Cylinders</div>
+                <div style="font-family:var(--font-mono);font-size:18px;font-weight:700;color:#fff">${node.oxygen_cylinders ?? '—'}</div>
+              </div>
+              <div style="background:rgba(255,255,255,0.03);padding:12px;border-radius:8px;border:1px solid rgba(255,255,255,0.05)">
+                <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px">Ambulance</div>
+                <div style="font-family:var(--font-mono);font-size:18px;font-weight:700;color:#fff">${node.ambulances ?? '—'}</div>
+              </div>
             </div>
-            <div style="background:rgba(255,255,255,0.03);padding:12px;border-radius:8px;border:1px solid rgba(255,255,255,0.05)">
-              <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px">O2 Cylinders</div>
-              <div style="font-family:var(--font-mono);font-size:18px;font-weight:700;color:#fff">${node.oxygen_cylinders ?? '—'}</div>
+            
+            <div style="display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:12px">
+              <span style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.15em">Scarcity Index</span>
+              <div style="font-family:var(--font-mono);font-size:36px;font-weight:700;color:${c};line-height:1;text-shadow:0 0 24px ${glow}">${s}<span style="font-size:14px;color:var(--text-dark);text-shadow:none">/100</span></div>
             </div>
-            <div style="background:rgba(255,255,255,0.03);padding:12px;border-radius:8px;border:1px solid rgba(255,255,255,0.05)">
-              <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px">Ambulance</div>
-              <div style="font-family:var(--font-mono);font-size:18px;font-weight:700;color:#fff">${node.ambulances ?? '—'}</div>
+            <div style="width:100%;height:4px;background:rgba(255,255,255,0.1);border-radius:2px;overflow:hidden">
+              <div style="width:${s}%;height:100%;background:${c};box-shadow:0 0 12px ${c};transition:width 0.5s cubic-bezier(0.16,1,0.3,1)"></div>
             </div>
-          </div>
-          
-          <div style="display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:12px">
-            <span style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.15em">Scarcity Index</span>
-            <div style="font-family:var(--font-mono);font-size:36px;font-weight:700;color:${c};line-height:1;text-shadow:0 0 24px ${glow}">${s}<span style="font-size:14px;color:var(--text-dark);text-shadow:none">/100</span></div>
-          </div>
-          <div style="width:100%;height:4px;background:rgba(255,255,255,0.1);border-radius:2px;overflow:hidden">
-            <div style="width:${s}%;height:100%;background:${c};box-shadow:0 0 12px ${c};transition:width 0.5s cubic-bezier(0.16,1,0.3,1)"></div>
-          </div>
-        `;
+          `;
+        }
         hud.classList.add('active');
       } else {
         hud.classList.remove('active');
@@ -624,10 +644,25 @@ function initGlobe() {
     })
     .onPointClick(node => {
       if(node) {
-        world.pointOfView({ lat: node.lat, lng: node.lng, altitude: 0.1 }, 1500);
-        setTimeout(() => {
-          window.open(`https://www.google.com/maps/search/?api=1&query=${node.lat},${node.lng}`, '_blank');
-        }, 1500);
+        if (node.isCity) {
+          globeMode = 'nodes';
+          globeCity = node.city;
+          renderGlobeData();
+          world.pointOfView({ lat: node.lat, lng: node.lng, altitude: 0.15 }, 1500);
+        } else {
+          world.pointOfView({ lat: node.lat, lng: node.lng, altitude: 0.05 }, 1500);
+          setTimeout(() => {
+            window.open(`https://www.google.com/maps/search/?api=1&query=${node.lat},${node.lng}`, '_blank');
+          }, 1500);
+        }
+      }
+    })
+    .onGlobeClick(() => {
+      if (globeMode === 'nodes') {
+        globeMode = 'cities';
+        globeCity = null;
+        renderGlobeData();
+        world.pointOfView({ lat: 14.5, lng: 76.0, altitude: 0.8 }, 1500);
       }
     });
 
@@ -731,7 +766,11 @@ function jumpCity(city) {
   const targetLat = (Math.min(...lats)+Math.max(...lats))/2;
   const targetLng = (Math.min(...lngs)+Math.max(...lngs))/2;
   
-  world.pointOfView({ lat: targetLat, lng: targetLng, altitude: 0.3 }, 2000);
+  globeMode = 'nodes';
+  globeCity = city;
+  renderGlobeData();
+  
+  world.pointOfView({ lat: targetLat, lng: targetLng, altitude: 0.2 }, 2000);
   if (document.getElementById("view-resources").classList.contains("on")) renderTable();
 }
 
@@ -751,26 +790,46 @@ function filterSearch(q) {
 
 // --- RENDER GLOBE DATA ---
 function renderGlobeData() {
-  // Pass node data to Globe points and rings
-  world.pointsData(nodes);
-  world.ringsData(nodes.filter(n => (n.scarcity || 0) > 65));
-  
-  // Generate random arcs for visual effect (mimicking network traffic)
-  const arcs = [];
-  if (nodes.length > 1) {
-    for (let i = 0; i < 25; i++) {
-      const from = nodes[Math.floor(Math.random() * nodes.length)];
-      const to = nodes[Math.floor(Math.random() * nodes.length)];
-      if (from && to && from !== to) {
-        arcs.push({
-          startLat: from.lat, startLng: from.lng,
-          endLat: to.lat, endLng: to.lng,
-          color: (from.scarcity || 0) > 65 ? '#ff2a2a' : '#10b981'
-        });
+  if (globeMode === 'cities') {
+    const cmap = {};
+    nodes.forEach(n => {
+      const c = n.city || "Unknown";
+      if (!cmap[c]) cmap[c] = { city: c, lat: 0, lng: 0, count: 0, maxS: 0, nodes: [] };
+      cmap[c].lat += n.lat;
+      cmap[c].lng += n.lng;
+      cmap[c].count++;
+      if ((n.scarcity || 0) > cmap[c].maxS) cmap[c].maxS = n.scarcity || 0;
+      cmap[c].nodes.push(n);
+    });
+    const clusters = Object.values(cmap).map(c => ({
+      ...c, lat: c.lat/c.count, lng: c.lng/c.count, isCity: true
+    }));
+    
+    world.pointsData(clusters);
+    world.ringsData(clusters.filter(c => c.maxS > 65));
+    world.arcsData([]); 
+    world.htmlElementsData(clusters);
+  } else {
+    const cityNodes = globeCity ? nodes.filter(n => n.city === globeCity) : nodes;
+    world.pointsData(cityNodes);
+    world.ringsData(cityNodes.filter(n => (n.scarcity || 0) > 65));
+    
+    const arcs = [];
+    if (cityNodes.length > 1) {
+      for (let i = 0; i < 15; i++) {
+        const from = cityNodes[Math.floor(Math.random() * cityNodes.length)];
+        const to = cityNodes[Math.floor(Math.random() * cityNodes.length)];
+        if (from !== to) {
+          arcs.push({
+            startLat: from.lat, startLng: from.lng, endLat: to.lat, endLng: to.lng,
+            color: (from.scarcity || 0) > 65 ? '#ff2a2a' : '#10b981'
+          });
+        }
       }
     }
+    world.arcsData(arcs);
+    world.htmlElementsData(cityNodes);
   }
-  world.arcsData(arcs);
 }
 
 // --- RENDER TABLE ---
