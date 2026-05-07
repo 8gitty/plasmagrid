@@ -212,6 +212,29 @@ html, body {
 .hud-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; border: 2px solid rgba(255,255,255,0.9); }
 .hud-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
 
+/* Premium Modal */
+.premium-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(20px); z-index: 9999; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
+.premium-overlay.active { opacity: 1; pointer-events: auto; }
+.premium-modal {
+  width: 440px; background: linear-gradient(180deg, rgba(20,20,24,0.95), rgba(10,10,12,0.98));
+  border: 1px solid rgba(255,255,255,0.1); border-top: 3px solid var(--accent-cyan);
+  border-radius: 16px; padding: 32px; box-shadow: 0 40px 100px rgba(0,0,0,0.9), 0 0 60px rgba(0,240,255,0.1);
+  transform: scale(0.95) translateY(20px); transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex; flex-direction: column; gap: 20px;
+}
+.premium-overlay.active .premium-modal { transform: scale(1) translateY(0); }
+.pm-title { font-size: 14px; font-weight: 800; letter-spacing: 0.2em; text-transform: uppercase; color: var(--accent-cyan); display: flex; align-items: center; gap: 12px; }
+.pm-title i { font-style: normal; font-size: 18px; text-shadow: 0 0 12px currentColor; }
+.pm-body { font-size: 16px; color: #fff; line-height: 1.6; font-weight: 500; }
+.pm-actions { display: flex; gap: 16px; justify-content: flex-end; margin-top: 12px; }
+.pm-btn { padding: 12px 28px; border-radius: 8px; font-weight: 700; font-family: var(--font-mono); font-size: 13px; letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer; transition: all 0.2s; }
+.pm-btn-primary { background: var(--accent-cyan); color: #000; border: none; box-shadow: 0 0 20px rgba(0,240,255,0.3); }
+.pm-btn-primary:hover { box-shadow: 0 0 30px rgba(0,240,255,0.5); transform: translateY(-2px); }
+.pm-btn-danger { background: var(--status-crit); color: #000; border: none; box-shadow: 0 0 20px rgba(255,42,42,0.3); }
+.pm-btn-danger:hover { box-shadow: 0 0 30px rgba(255,42,42,0.5); transform: translateY(-2px); }
+.pm-btn-secondary { background: rgba(255,255,255,0.05); color: #fff; border: 1px solid rgba(255,255,255,0.1); }
+.pm-btn-secondary:hover { background: rgba(255,255,255,0.1); }
+
 /* Resource & Threat Views - Adding Glass Backgrounds so they overlay globe cleanly */
 #view-resources > .res-wrap, #view-threats > .threat-wrap {
   pointer-events: auto;
@@ -835,6 +858,57 @@ async function runAlloc() {
   btn.disabled = false; btn.textContent = "⚡ Initialize Allocation";
 }
 
+// --- PREMIUM ALERT ---
+function pAlert(title, msg, type = 'info') {
+  return new Promise(resolve => {
+    const isCrit = type === 'crit';
+    const c = isCrit ? 'var(--status-crit)' : 'var(--accent-cyan)';
+    const over = document.createElement('div');
+    over.className = 'premium-overlay';
+    over.innerHTML = `
+      <div class="premium-modal" style="border-top-color: ${c}; box-shadow: 0 40px 100px rgba(0,0,0,0.9), 0 0 60px ${c}20">
+        <div class="pm-title" style="color: ${c}">
+          <i>${isCrit ? '🚨' : '✨'}</i> ${title}
+        </div>
+        <div class="pm-body">${msg.replace(/\n/g, '<br>')}</div>
+        <div class="pm-actions">
+          <button class="pm-btn pm-btn-primary" style="background: ${c}; box-shadow: 0 0 20px ${c}40" id="pm-ok">ACKNOWLEDGE</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(over);
+    requestAnimationFrame(() => over.classList.add('active'));
+    over.querySelector('#pm-ok').onclick = () => {
+      over.classList.remove('active');
+      setTimeout(() => { over.remove(); resolve(true); }, 300);
+    };
+  });
+}
+
+function pConfirm(title, msg) {
+  return new Promise(resolve => {
+    const c = 'var(--status-crit)';
+    const over = document.createElement('div');
+    over.className = 'premium-overlay';
+    over.innerHTML = `
+      <div class="premium-modal" style="border-top-color: ${c}; box-shadow: 0 40px 100px rgba(0,0,0,0.9), 0 0 60px ${c}20">
+        <div class="pm-title" style="color: ${c}">
+          <i>⚠️</i> ${title}
+        </div>
+        <div class="pm-body">${msg.replace(/\n/g, '<br>')}</div>
+        <div class="pm-actions">
+          <button class="pm-btn pm-btn-secondary" id="pm-no">CANCEL</button>
+          <button class="pm-btn pm-btn-danger" style="background: ${c}; box-shadow: 0 0 20px ${c}40" id="pm-yes">CONFIRM</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(over);
+    requestAnimationFrame(() => over.classList.add('active'));
+    over.querySelector('#pm-no').onclick = () => { over.classList.remove('active'); setTimeout(() => { over.remove(); resolve(false); }, 300); };
+    over.querySelector('#pm-yes').onclick = () => { over.classList.remove('active'); setTimeout(() => { over.remove(); resolve(true); }, 300); };
+  });
+}
+
 // --- THREAT SIMULATION ---
 async function simAttack() {
   try {
@@ -849,9 +923,9 @@ async function simAttack() {
         confidence: data.threat.confidence || 95, reason: data.threat.reason || "Anomalous spike in scarcity",
         old_scarcity: 20, new_scarcity: 99, action: data.threat.action || "QUARANTINED", timestamp: new Date().toISOString()
       });
-      alert("IMMUNE SYSTEM ENGAGED\n\nMalicious data mutation quarantined.\nNetwork integrity maintained.");
-    } else alert("Simulation complete — no anomalies flagged.");
-  } catch(e) { alert("API Connection Failed.\nVerify backend server status.") }
+      await pAlert("IMMUNE SYSTEM ENGAGED", "Malicious data mutation quarantined.\nNetwork integrity maintained.", "crit");
+    } else await pAlert("SYSTEM SECURE", "Simulation complete — no anomalies flagged.", "info");
+  } catch(e) { await pAlert("CONNECTION FAILED", "API Connection Failed.\nVerify backend server status.", "crit"); }
 }
 
 function addThreat(t) {
@@ -895,13 +969,14 @@ async function loadThreats() {
 }
 
 async function resetNet() {
-  if (!confirm("Confirm network baseline reset? All local mutations will be purged.")) return;
+  const confirmed = await pConfirm("SYSTEM RESET", "Confirm network baseline reset?\nAll local mutations will be purged.");
+  if (!confirmed) return;
   const s = { victoria: 72, bowring: 45, kc_general: 28, jayadeva: 81, nimhans: 33, esi_blr: 55, manipal_blr: 20, fortis_blr: 38, apollo_blr: 62, narayana: 25, columbia_blr: 49, sakra: 67, rotary_ttk: 18, stjohns_bb: 30, cats_depot: 15, mysuru_general: 68, jssh_mysuru: 42, cheluvamba: 74, mysuru_bb: 22, wenlock: 76, kmc_manipal: 35, father_muller: 40, mangaluru_bb: 28, kims_hubli: 58, district_hubli: 71, sdm_dharwad: 44, hubli_bb: 32, belgaum_general: 65, kle_belgaum: 38, tumkur_general: 70, siddaganga_tumkur: 45, gulbarga_general: 78, esic_gulbarga: 60, mcgann_shimoga: 66, manipal_shimoga: 40, bapuji_davangere: 52, chigateri_davangere: 73, vims_ballari: 69, hassan_general: 61, udupi_district: 47, kasturba_manipal: 30, karnataka_108_hub: 12, ksbb_state: 15 };
   for (const [id, scarcity] of Object.entries(s)) {
     await fetch(`${API}/update-node`, { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({id, scarcity}) });
   }
   await loadNodes();
-  alert("Network reset to baseline.");
+  await pAlert("RESET COMPLETE", "Network successfully reset to baseline metrics.", "info");
 }
 
 // --- VIEW ROUTING ---
