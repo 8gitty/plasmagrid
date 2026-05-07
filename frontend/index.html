@@ -489,11 +489,11 @@ let world; // Globe instance
 function initGlobe() {
   world = Globe()
     (document.getElementById('globe-viz'))
-    .globeImageUrl('//unpkg.com/three-globe/example/img/earth-dark.jpg')
+    .globeImageUrl('//unpkg.com/three-globe/example/img/earth-blue-marble.jpg')
     .bumpImageUrl('//unpkg.com/three-globe/example/img/earth-topology.png')
     .backgroundImageUrl('//unpkg.com/three-globe/example/img/night-sky.png')
     .showAtmosphere(true)
-    .atmosphereColor('#00e5ff')
+    .atmosphereColor('#3a82f6')
     .atmosphereAltitude(0.15)
     .pointOfView({ lat: 15.3173, lng: 75.7139, altitude: 2.5 }) // Initial high view
     .pointLat('lat')
@@ -517,6 +517,17 @@ function initGlobe() {
     .ringMaxRadius(d => (d.scarcity || 0) > 65 ? 2.5 : 1.5)
     .ringPropagationSpeed(1.5)
     .ringRepeatPeriod(800)
+    
+    // Arcs for network traffic
+    .arcStartLat(d => d.startLat)
+    .arcStartLng(d => d.startLng)
+    .arcEndLat(d => d.endLat)
+    .arcEndLng(d => d.endLng)
+    .arcColor(d => d.color)
+    .arcDashLength(0.4)
+    .arcDashGap(0.2)
+    .arcDashAnimateTime(1500)
+    .arcStroke(0.6)
 
     // Interaction
     .onPointHover(node => {
@@ -702,6 +713,23 @@ function renderGlobeData() {
   // Pass node data to Globe points and rings
   world.pointsData(nodes);
   world.ringsData(nodes.filter(n => (n.scarcity || 0) > 65));
+  
+  // Generate random arcs for visual effect (mimicking network traffic)
+  const arcs = [];
+  if (nodes.length > 1) {
+    for (let i = 0; i < 25; i++) {
+      const from = nodes[Math.floor(Math.random() * nodes.length)];
+      const to = nodes[Math.floor(Math.random() * nodes.length)];
+      if (from && to && from !== to) {
+        arcs.push({
+          startLat: from.lat, startLng: from.lng,
+          endLat: to.lat, endLng: to.lng,
+          color: (from.scarcity || 0) > 65 ? '#ff2a2a' : '#10b981'
+        });
+      }
+    }
+  }
+  world.arcsData(arcs);
 }
 
 // --- RENDER TABLE ---
