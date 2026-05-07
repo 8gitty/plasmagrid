@@ -53,10 +53,30 @@ html, body {
 
 #leaflet-map { position: absolute; inset: 0; z-index: 5; opacity: 0; pointer-events: none; transition: opacity 1.2s cubic-bezier(0.16, 1, 0.3, 1); }
 #leaflet-map.active { opacity: 1; pointer-events: auto; }
-.l-marker { background: rgba(0,0,0,0.8); border: 1px solid var(--accent-cyan); border-radius: 6px; color: var(--accent-cyan); font-family: var(--font-mono); font-weight: 700; font-size: 11px; padding: 4px 8px; text-shadow: 0 0 10px var(--accent-cyan); white-space: nowrap; box-shadow: 0 0 20px rgba(0,240,255,0.2); transition: all 0.2s; }
-.l-marker:hover { transform: scale(1.1); z-index: 100 !important; background: var(--accent-cyan); color: #000; text-shadow: none; }
-.l-marker.crit { border-color: var(--status-crit); color: var(--status-crit); text-shadow: 0 0 10px var(--status-crit); box-shadow: 0 0 20px rgba(255,42,42,0.3); }
-.l-marker.crit:hover { background: var(--status-crit); color: #000; text-shadow: none; }
+/* Node Dots (Leaflet & Globe) */
+.map-dot {
+  width: 12px; height: 12px; border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.8);
+  box-shadow: 0 0 15px currentColor, inset 0 0 8px currentColor;
+  cursor: pointer; pointer-events: auto;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  background: currentColor;
+}
+.map-dot:hover { transform: scale(1.6); z-index: 1000 !important; }
+
+/* Custom Leaflet Tooltip */
+.l-tooltip {
+  background: rgba(10,10,12,0.85) !important;
+  border: 1px solid rgba(255,255,255,0.1) !important;
+  color: #fff !important; font-family: var(--font-mono) !important;
+  border-radius: 8px !important; backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.5) !important;
+  font-size: 13px !important; font-weight: 700 !important;
+  padding: 8px 12px !important;
+}
+.leaflet-tooltip-top:before { border-top-color: rgba(255,255,255,0.1) !important; }
+.leaflet-tooltip-bottom:before { border-bottom-color: rgba(255,255,255,0.1) !important; }
 
 /* Glassmorphism Utilities - Porsche UI Style (Crisp, High Contrast) */
 .glass {
